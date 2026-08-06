@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <!-- 
+    ============================================
+    BASIS CONFIGURATIE
+    ============================================
+    Dit is het hoofddocument van het Panta Club 
+    fietsregistratieplatform. Alle andere pagina's
+    worden via JavaScript geladen.
+    ============================================
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panta Club - Fietsregistratie</title>
+    
+    <!-- Google Fonts: Poppins (huisstijl Panta Club) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Eigen CSS-bestanden -->
+    <link rel="stylesheet" href="../src/assets/css/style.css">
+    <link rel="stylesheet" href="../src/assets/css/components.css">
+</head>
+<body>
+    <!-- 
+    ============================================
+    DYNAMISCHE CONTENT CONTAINER
+    ============================================
+    Alle pagina-inhoud wordt hier geladen via 
+    JavaScript. De navigatie blijft statisch 
+    maar wordt ook via JS ingeladen.
+    ============================================
+    -->
+    <div id="app">
+        <!-- Navigatie wordt hier ingeladen -->
+        <nav id="navigation"></nav>
+        
+        <!-- Pagina-inhoud komt hier -->
+        <main id="main-content">
+            <!-- Standaard wordt de login-pagina getoond -->
+        </main>
+        
+        <!-- Footer wordt hier ingeladen -->
+        <footer id="footer"></footer>
+    </div>
+
+    <!-- 
+    ============================================
+    JAVASCRIPT DEPENDENCIES
+    ============================================
+    We laden de benodigde bibliotheken in.
+    - Supabase: voor database en authenticatie
+    - QRCode: voor het genereren van QR-codes
+    - XLSX: voor Excel-import
+    ============================================
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Eigen JavaScript-bestanden -->
+    <script src="../src/assets/js/config.js"></script>
+    <script src="../src/assets/js/auth.js"></script>
+    <script src="../src/assets/js/db.js"></script>
+    <script src="../src/assets/js/app.js"></script>
+    
+    <!-- Componenten (navigatie, footer) -->
+    <script src="../src/components/navigation.js"></script>
+    <script src="../src/components/footer.js"></script>
+</body>
+</html>
