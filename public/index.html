@@ -41,11 +41,12 @@
     </nav>
     
     <!-- ============================================
-         MAIN CONTENT - 80% BREEDTE
+         MAIN CONTENT - MET VASTE CONTAINER
          ============================================ -->
     <main id="main-content">
-        <div class="container">
-            <!-- Dashboard wordt hier geladen -->
+        <!-- Deze div blijft ALTIJD bestaan met de container class -->
+        <div class="container" id="content-wrapper">
+            <!-- Inhoud wordt hier geladen -->
         </div>
     </main>
     
@@ -74,10 +75,10 @@
         
         console.log('🚀 Panta Club Fietsregistratie gestart!');
         console.log('📐 Navigatie en footer: 100% breed');
-        console.log('📐 Main content: 80% breed');
+        console.log('📐 Main content: 80% breed (via container class)');
         
         // ============================================
-        // PAGINA'S
+        // PAGINA'S (zonder container - die blijft behouden)
         // ============================================
         
         const PAGES = {
@@ -206,8 +207,21 @@
                 return;
             }
             
-            document.getElementById('main-content').innerHTML = content;
+            // ============================================
+            // BELANGRIJK: We vervangen ALLEEN de inhoud
+            // De container class blijft behouden!
+            // ============================================
+            const wrapper = document.getElementById('content-wrapper');
+            if (wrapper) {
+                // We vervangen de innerHTML, maar de container class blijft
+                // omdat die op de wrapper div staat, niet op de inhoud
+                wrapper.innerHTML = content;
+                console.log('✅ Inhoud vervangen in container');
+            } else {
+                console.error('❌ content-wrapper niet gevonden!');
+            }
             
+            // Update navigatie active state
             document.querySelectorAll('.navbar-links a').forEach(link => {
                 link.classList.remove('active');
                 if (link.getAttribute('data-page') === page) {
@@ -215,6 +229,7 @@
                 }
             });
             
+            // Sluit mobiel menu
             const navbarLinks = document.getElementById('navbarLinks');
             const menuToggle = document.getElementById('menuToggle');
             if (navbarLinks) {
@@ -268,6 +283,15 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ DOM geladen!');
+            
+            // Controleer of de container bestaat
+            const wrapper = document.getElementById('content-wrapper');
+            if (wrapper) {
+                console.log('✅ content-wrapper gevonden met class:', wrapper.className);
+            } else {
+                console.error('❌ content-wrapper niet gevonden!');
+            }
+            
             navigateTo('dashboard');
             setupMobileMenu();
             

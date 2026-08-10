@@ -27,63 +27,45 @@ body {
 }
 
 /* ============================================
-   MAIN CONTENT CONTAINER - 80% (FORCEREN)
+   MAIN CONTENT - 80% (via container class)
    ============================================ */
-#content-wrapper,
-.container,
-main .container,
-#main-content .container {
-    max-width: 80% !important;
-    width: 80% !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-}
-
-/* Alles in de main content mag niet breder zijn dan de container */
-#content-wrapper *,
-.container *,
-main .container * {
-    max-width: 100% !important;
+.container {
+    max-width: 80%;
+    width: 80%;
+    margin: 0 auto;
+    padding: 0 20px;
 }
 
 /* ============================================
-   CONTAINER VOOR NAVIGATIE & FOOTER - 100%
+   NAVIGATIE & FOOTER - 100% 
    ============================================ */
 .container-full {
-    max-width: 100% !important;
-    width: 100% !important;
-    padding: 0 20px !important;
-    margin: 0 auto !important;
+    max-width: 100%;
+    width: 100%;
+    padding: 0 20px;
+    margin: 0 auto;
 }
 
-/* Responsive: main content breder op kleine schermen */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
-    #content-wrapper,
-    .container,
-    main .container,
-    #main-content .container {
-        max-width: 92% !important;
-        width: 92% !important;
-        padding-left: 10px !important;
-        padding-right: 10px !important;
+    .container {
+        max-width: 92%;
+        width: 92%;
+        padding: 0 10px;
     }
 }
 
-/* Op grote schermen niet te breed */
 @media (min-width: 1400px) {
-    #content-wrapper,
-    .container,
-    main .container,
-    #main-content .container {
-        max-width: 1200px !important;
-        width: 1200px !important;
+    .container {
+        max-width: 1200px;
+        width: 1200px;
     }
 }
 
 /* ============================================
-   NAVIGATIE - 100% BREEDTE
+   NAVIGATIE
    ============================================ */
 .navbar {
     background-color: var(--primary-blue);
@@ -95,11 +77,11 @@ main .container * {
 }
 
 .navbar .container-full {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .navbar-brand {
@@ -185,7 +167,7 @@ main .container * {
 }
 
 /* ============================================
-   MAIN - 80% via container
+   MAIN
    ============================================ */
 main {
     display: block;
@@ -194,7 +176,7 @@ main {
 }
 
 /* ============================================
-   FOOTER - 100% BREEDTE
+   FOOTER
    ============================================ */
 .site-footer {
     background-color: var(--primary-blue);
@@ -205,10 +187,10 @@ main {
 }
 
 .site-footer .container-full {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .site-footer strong {
