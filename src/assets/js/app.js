@@ -768,7 +768,6 @@ async function loadFietsen() {
         
         if (error) throw error;
         
-        // Sla alle fietsen op voor zoekfunctie
         alleFietsen = data || [];
         
         if (!data || data.length === 0) {
@@ -796,7 +795,6 @@ async function filterFietsen() {
     const lijst = document.getElementById('fietsenLijst');
     if (!lijst) return;
     
-    // Als er nog geen data is geladen, laad eerst
     if (alleFietsen.length === 0) {
         try {
             const { data, error } = await window.supabaseClient
@@ -1913,6 +1911,14 @@ async function loadStats() {
 
 function loadDashboard() {
     console.log('📊 Dashboard laden...');
+    
+    // ============================================
+    // ZORG DAT DE NAVIGATIE ZICHTBAAR IS
+    // ============================================
+    if (typeof window.renderNavigation === 'function') {
+        window.renderNavigation();
+    }
+    
     navigateTo('dashboard');
 }
 

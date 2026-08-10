@@ -114,6 +114,14 @@ async function logoutUser() {
         window.currentUser = null;
         sessionStorage.removeItem('panta_user');
         
+        // ============================================
+        // FIX: UPDATE NAVIGATIE NA UITLOGGEN
+        // ============================================
+        if (typeof window.renderNavigation === 'function') {
+            console.log('🔄 Navigatie herladen na uitloggen...');
+            window.renderNavigation();
+        }
+        
         return { success: true };
         
     } catch (error) {
@@ -269,6 +277,15 @@ async function handleLoginSubmit(event) {
         
         if (result.success) {
             console.log('✅ Inloggen gelukt!');
+            
+            // ============================================
+            // FIX: HERLAAD DE NAVIGATIE NA INLOGGEN
+            // ============================================
+            if (typeof window.renderNavigation === 'function') {
+                console.log('🔄 Navigatie herladen na inloggen...');
+                window.renderNavigation();
+            }
+            
             if (typeof window.loadDashboard === 'function') {
                 window.loadDashboard();
             } else {
