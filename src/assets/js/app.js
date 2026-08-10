@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// PAGINA'S (ALLEEN KLANTEN EXCEL IMPORT)
+// PAGINA'S
 // ============================================
 
 const PAGES = {
@@ -188,7 +188,15 @@ const PAGES = {
                     <form id="fietsForm">
                         <div class="form-group">
                             <label for="fietsSerienummer">Serienummer *</label>
-                            <input type="text" id="fietsSerienummer" placeholder="Bijv. PNT-2024-001" required>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="fietsSerienummer" placeholder="Bijv. PC-A7B3F9D2" style="flex:1;" required>
+                                <button type="button" class="btn btn-outline" onclick="window.vulSerienummerIn()" style="white-space:nowrap;">
+                                    🎲 Genereer
+                                </button>
+                            </div>
+                            <small style="color: #999; font-size: 0.8rem;">
+                                Klik op "Genereer" voor een automatisch serienummer (PC-XXXXXXXX)
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="fietsModelSelect">Model (merk + model + kleur) *</label>
@@ -465,6 +473,42 @@ async function handleLogout() {
 }
 
 window.handleLogout = handleLogout;
+
+// ============================================
+// SERIENUMMER GENERATOR
+// ============================================
+
+/**
+ * Genereert een uniek serienummer met prefix PC
+ * Formaat: PC + 8 willekeurige alfanumerieke karakters
+ * @returns {string} - Bijv. "PC-A7B3F9D2"
+ */
+function genereerSerienummer() {
+    const prefix = 'PC';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return `${prefix}-${result}`;
+}
+
+/**
+ * Vul het serienummer veld met een gegenereerde code
+ */
+function vulSerienummerIn() {
+    const input = document.getElementById('fietsSerienummer');
+    if (input) {
+        const nieuwSerienummer = genereerSerienummer();
+        input.value = nieuwSerienummer;
+        input.style.borderColor = '#28a745';
+        input.style.backgroundColor = '#f0fff4';
+        setTimeout(() => {
+            input.style.borderColor = '';
+            input.style.backgroundColor = '';
+        }, 1500);
+    }
+}
 
 // ============================================
 // MODEL FUNCTIES
@@ -1477,8 +1521,7 @@ async function handleKlantSubmit(event) {
 }
 
 // ============================================
-// KLANT EXCEL IMPORT FUNCTIES (Subscribers tabblad)
-// ============================================
+// KLANT EXCEL IMPORT FUNCTIES// ============================================
 
 let excelData = [];
 let excelHeaders = [];
@@ -1526,8 +1569,6 @@ function processExcelFile(file) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            
-            // Kies het eerste werkblad (Subscribers)
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
             
@@ -1614,7 +1655,6 @@ async function importExcelData() {
     let skippedCount = 0;
     
     try {
-        // Haal bestaande emails op om duplicaten te voorkomen
         const { data: bestaandeKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('email');
@@ -1626,16 +1666,12 @@ async function importExcelData() {
         for (let i = 0; i < excelData.length; i++) {
             const row = excelData[i];
             
-            // ============================================
-            // HAAL GEGEVENS OP (Subscribers kolommen)
-            // ============================================
             const firstName = row.first_name || '';
             const lastName = row.last_name || '';
             const naam = `${firstName} ${lastName}`.trim();
             const email = row.email ? String(row.email).trim() : null;
             const telefoon = row.phone ? String(row.phone).trim() : null;
             
-            // Adres samenstellen
             const adres1 = row.default_shipping_address_1 || '';
             const adres2 = row.default_shipping_address_2 || '';
             const stad = row.default_shipping_city || '';
@@ -1651,25 +1687,18 @@ async function importExcelData() {
             
             const adres = adresParts.filter(Boolean).join(', ') || null;
             
-            // ============================================
-            // VALIDATIE
-            // ============================================
             if (!naam) {
                 errorCount++;
                 errors.push(`Rij ${i + 1}: Geen naam gevonden`);
                 continue;
             }
             
-            // Controleer of email al bestaat (als email ingevuld is)
             if (email && bestaandeEmails.has(email)) {
                 skippedCount++;
                 errors.push(`Rij ${i + 1}: Email ${email} bestaat al (overgeslagen)`);
                 continue;
             }
             
-            // ============================================
-            // OPSLAAN IN SUPABASE
-            // ============================================
             const { error } = await window.supabaseClient
                 .from('klanten')
                 .insert([{
@@ -1689,9 +1718,6 @@ async function importExcelData() {
             }
         }
         
-        // ============================================
-        // RESULTAAT TONEN
-        // ============================================
         let resultMessage = `✅ ${successCount} klanten succesvol geïmporteerd.`;
         if (skippedCount > 0) {
             resultMessage += `\n⏭️ ${skippedCount} klanten overgeslagen (dubbele email).`;
@@ -2220,10 +2246,6 @@ function showMessage(message) {
 // QR-CODE FUNCTIES
 // ============================================
 
-/**
- * Toont een QR-code in een modal/popup
- * @param {string} serienummer - Het serienummer van de fiets
- */
 async function showQRCode(serienummer) {
     console.log('📱 Toon QR-code voor:', serienummer);
     
@@ -2354,9 +2376,6 @@ async function showQRCode(serienummer) {
     }
 }
 
-/**
- * Sluit de QR-code modal
- */
 function closeQRModal() {
     const modal = document.getElementById('qrModal');
     if (modal) {
@@ -2364,9 +2383,6 @@ function closeQRModal() {
     }
 }
 
-/**
- * Downloadt de QR-code als afbeelding met fietsgegevens
- */
 function downloadQRCode() {
     console.log('⬇️ Start download van QR-afbeelding...');
     
@@ -2447,6 +2463,10 @@ window.saveModel = saveModel;
 window.cancelEditModel = cancelEditModel;
 window.deleteModel = deleteModel;
 
+// Serienummer generator
+window.genereerSerienummer = genereerSerienummer;
+window.vulSerienummerIn = vulSerienummerIn;
+
 // Fietsen
 window.filterFietsen = filterFietsen;
 window.resetFietsFilter = resetFietsFilter;
@@ -2465,7 +2485,7 @@ window.deleteKlant = deleteKlant;
 window.filterKlanten = filterKlanten;
 window.resetKlantFilter = resetKlantFilter;
 
-// Klant Excel Import (Subscribers)
+// Klant Excel Import
 window.showExcelImport = showExcelImport;
 window.closeExcelImport = closeExcelImport;
 window.handleExcelFile = handleExcelFile;
