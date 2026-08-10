@@ -701,8 +701,10 @@ async function handleModelSubmit(event) {
 }
 
 // ============================================
-// FIETS FUNCTIES
+// FIETSEN FUNCTIES
 // ============================================
+
+let alleFietsen = [];
 
 function showAddFietsForm() {
     const form = document.getElementById('addFietsForm');
@@ -748,16 +750,53 @@ async function loadModelSelectOptions() {
     }
 }
 
-// ============================================
-// FIETSEN ZOEKEN & FILTEREN
-// ============================================
-
-let alleFietsen = [];
+async function loadFietsen() {
+    console.log('📥 Laden van fietsen...');
+    const lijst = document.getElementById('fietsenLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select(`*, fiets_modellen (merk, model, kleur)`)
+            .order('aangemaakt_op', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Sla alle fietsen op voor zoekfunctie
+        alleFietsen = data || [];
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
+                    <h3>Geen fietsen gevonden</h3>
+                    <p style="color: #999;">Voeg je eerste fiets toe met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonFietsenLijst(data);
+        
+    } catch (error) {
+        console.error('❌ Fout bij laden fietsen:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3><p style="color:#999;">${error.message}</p></div>`;
+    }
+}
 
 async function filterFietsen() {
     const zoekTerm = document.getElementById('fietsZoekInput').value.toLowerCase().trim();
     const statusFilter = document.getElementById('fietsStatusFilter').value;
+    const lijst = document.getElementById('fietsenLijst');
+    if (!lijst) return;
     
+    // Als er nog geen data is geladen, laad eerst
     if (alleFietsen.length === 0) {
         try {
             const { data, error } = await window.supabaseClient
@@ -769,6 +808,7 @@ async function filterFietsen() {
             alleFietsen = data || [];
         } catch (error) {
             console.error('❌ Fout bij laden:', error);
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
             return;
         }
     }
@@ -787,6 +827,17 @@ async function filterFietsen() {
         gefilterd = gefilterd.filter(fiets => fiets.status === statusFilter);
     }
     
+    if (gefilterd.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen fietsen gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
     toonFietsenLijst(gefilterd, `Totaal: ${gefilterd.length} fietsen (gefilterd)`);
 }
 
@@ -800,17 +851,6 @@ function resetFietsFilter() {
 function toonFietsenLijst(data, footerText) {
     const lijst = document.getElementById('fietsenLijst');
     if (!lijst) return;
-    
-    if (!data || data.length === 0) {
-        lijst.innerHTML = `
-            <div class="card" style="text-align: center; padding: 40px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
-                <h3>Geen fietsen gevonden</h3>
-                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
-            </div>
-        `;
-        return;
-    }
     
     let html = `
         <div class="table-responsive">
@@ -1053,6 +1093,8 @@ async function handleFietsSubmit(event) {
 // KLANTEN FUNCTIES
 // ============================================
 
+let alleKlanten = [];
+
 function showAddKlantForm() {
     const form = document.getElementById('addKlantForm');
     if (form) {
@@ -1076,14 +1118,50 @@ function hideAddKlantForm() {
     }
 }
 
-// ============================================
-// KLANTEN ZOEKEN
-// ============================================
-
-let alleKlanten = [];
+async function loadKlanten() {
+    console.log('📥 Laden van klanten...');
+    alleKlanten = [];
+    
+    const lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('klanten')
+            .select('*')
+            .order('naam', { ascending: true });
+        
+        if (error) throw error;
+        
+        alleKlanten = data || [];
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
+                    <h3>Geen klanten gevonden</h3>
+                    <p style="color: #999;">Voeg je eerste klant toe met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonKlantenLijst(data);
+    } catch (error) {
+        console.error('❌ Fout bij laden klanten:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
 
 async function filterKlanten() {
     const zoekTerm = document.getElementById('klantZoekInput').value.toLowerCase().trim();
+    const lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
     
     if (alleKlanten.length === 0) {
         try {
@@ -1096,6 +1174,7 @@ async function filterKlanten() {
             alleKlanten = data || [];
         } catch (error) {
             console.error('❌ Fout bij laden:', error);
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
             return;
         }
     }
@@ -1107,6 +1186,17 @@ async function filterKlanten() {
             const zoekString = `${klant.naam} ${klant.email || ''} ${klant.telefoon || ''} ${klant.adres || ''}`.toLowerCase();
             return zoekString.includes(zoekTerm);
         });
+    }
+    
+    if (gefilterd.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen klanten gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
     }
     
     toonKlantenLijst(gefilterd, `Totaal: ${gefilterd.length} klanten (gefilterd)`);
@@ -1121,17 +1211,6 @@ function resetKlantFilter() {
 function toonKlantenLijst(data, footerText) {
     const lijst = document.getElementById('klantenLijst');
     if (!lijst) return;
-    
-    if (!data || data.length === 0) {
-        lijst.innerHTML = `
-            <div class="card" style="text-align: center; padding: 40px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
-                <h3>Geen klanten gevonden</h3>
-                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
-            </div>
-        `;
-        return;
-    }
     
     let html = `
         <div class="table-responsive">
@@ -1177,44 +1256,6 @@ function toonKlantenLijst(data, footerText) {
     `;
     
     lijst.innerHTML = html;
-}
-
-async function loadKlanten() {
-    console.log('📥 Laden van klanten...');
-    alleKlanten = [];
-    
-    const lijst = document.getElementById('klantenLijst');
-    if (!lijst) return;
-    
-    try {
-        if (!window.supabaseClient) {
-            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
-            return;
-        }
-        
-        const { data, error } = await window.supabaseClient
-            .from('klanten')
-            .select('*')
-            .order('naam', { ascending: true });
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
-                    <h3>Geen klanten gevonden</h3>
-                    <p style="color: #999;">Voeg je eerste klant toe met de knop hierboven.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        toonKlantenLijst(data);
-    } catch (error) {
-        console.error('❌ Fout bij laden klanten:', error);
-        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
-    }
 }
 
 // ============================================
@@ -1398,6 +1439,8 @@ async function handleKlantSubmit(event) {
 // VERHUUR FUNCTIES
 // ============================================
 
+let alleVerhuur = [];
+
 function showAddVerhuurForm() {
     const form = document.getElementById('addVerhuurForm');
     if (form) {
@@ -1422,15 +1465,105 @@ function hideAddVerhuurForm() {
     }
 }
 
-// ============================================
-// VERHUUR ZOEKEN & FILTEREN
-// ============================================
+async function loadVerhuurSelectOptions() {
+    const fietsSelect = document.getElementById('verhuurFiets');
+    const klantSelect = document.getElementById('verhuurKlant');
+    
+    if (fietsSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .select(`id, serienummer, fiets_modellen (merk, model, kleur)`)
+                .eq('status', 'beschikbaar')
+                .order('serienummer', { ascending: true });
+            
+            if (!error && data) {
+                fietsSelect.innerHTML = '<option value="">-- Selecteer een fiets --</option>';
+                data.forEach(fiets => {
+                    const modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
+                    const label = `${fiets.serienummer} - ${modelInfo.merk} ${modelInfo.model} (${modelInfo.kleur})`;
+                    const option = document.createElement('option');
+                    option.value = fiets.id;
+                    option.textContent = label;
+                    fietsSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden fietsen:', error);
+        }
+    }
+    
+    if (klantSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('klanten')
+                .select('id, naam')
+                .order('naam', { ascending: true });
+            
+            if (!error && data) {
+                klantSelect.innerHTML = '<option value="">-- Selecteer een klant --</option>';
+                data.forEach(klant => {
+                    const option = document.createElement('option');
+                    option.value = klant.id;
+                    option.textContent = klant.naam;
+                    klantSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden klanten:', error);
+        }
+    }
+}
 
-let alleVerhuur = [];
+async function loadVerhuur() {
+    console.log('📥 Laden van verhuur...');
+    alleVerhuur = [];
+    
+    const lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select(`
+                *,
+                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                klanten (naam, email, telefoon)
+            `)
+            .order('start_datum', { ascending: false });
+        
+        if (error) throw error;
+        
+        alleVerhuur = data || [];
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+                    <h3>Geen verhuur gevonden</h3>
+                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonVerhuurLijst(data);
+    } catch (error) {
+        console.error('❌ Fout bij laden verhuur:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
 
 async function filterVerhuur() {
     const zoekTerm = document.getElementById('verhuurZoekInput').value.toLowerCase().trim();
     const statusFilter = document.getElementById('verhuurStatusFilter').value;
+    const lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
     
     if (alleVerhuur.length === 0) {
         try {
@@ -1447,6 +1580,7 @@ async function filterVerhuur() {
             alleVerhuur = data || [];
         } catch (error) {
             console.error('❌ Fout bij laden:', error);
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
             return;
         }
     }
@@ -1469,6 +1603,17 @@ async function filterVerhuur() {
         gefilterd = gefilterd.filter(v => v.eind_datum);
     }
     
+    if (gefilterd.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen verhuur gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
     toonVerhuurLijst(gefilterd, `Totaal: ${gefilterd.length} verhuurregels (gefilterd)`);
 }
 
@@ -1482,17 +1627,6 @@ function resetVerhuurFilter() {
 function toonVerhuurLijst(data, footerText) {
     const lijst = document.getElementById('verhuurLijst');
     if (!lijst) return;
-    
-    if (!data || data.length === 0) {
-        lijst.innerHTML = `
-            <div class="card" style="text-align: center; padding: 40px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
-                <h3>Geen verhuur gevonden</h3>
-                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
-            </div>
-        `;
-        return;
-    }
     
     let html = `
         <div class="table-responsive">
@@ -1571,98 +1705,6 @@ function toonVerhuurLijst(data, footerText) {
     `;
     
     lijst.innerHTML = html;
-}
-
-async function loadVerhuur() {
-    console.log('📥 Laden van verhuur...');
-    alleVerhuur = [];
-    
-    const lijst = document.getElementById('verhuurLijst');
-    if (!lijst) return;
-    
-    try {
-        if (!window.supabaseClient) {
-            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
-            return;
-        }
-        
-        const { data, error } = await window.supabaseClient
-            .from('verhuur_historiek')
-            .select(`
-                *,
-                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
-                klanten (naam, email, telefoon)
-            `)
-            .order('start_datum', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
-                    <h3>Geen verhuur gevonden</h3>
-                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        toonVerhuurLijst(data);
-    } catch (error) {
-        console.error('❌ Fout bij laden verhuur:', error);
-        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
-    }
-}
-
-async function loadVerhuurSelectOptions() {
-    const fietsSelect = document.getElementById('verhuurFiets');
-    const klantSelect = document.getElementById('verhuurKlant');
-    
-    if (fietsSelect) {
-        try {
-            const { data, error } = await window.supabaseClient
-                .from('individuele_fietsen')
-                .select(`id, serienummer, fiets_modellen (merk, model, kleur)`)
-                .eq('status', 'beschikbaar')
-                .order('serienummer', { ascending: true });
-            
-            if (!error && data) {
-                fietsSelect.innerHTML = '<option value="">-- Selecteer een fiets --</option>';
-                data.forEach(fiets => {
-                    const modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
-                    const label = `${fiets.serienummer} - ${modelInfo.merk} ${modelInfo.model} (${modelInfo.kleur})`;
-                    const option = document.createElement('option');
-                    option.value = fiets.id;
-                    option.textContent = label;
-                    fietsSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('❌ Fout bij laden fietsen:', error);
-        }
-    }
-    
-    if (klantSelect) {
-        try {
-            const { data, error } = await window.supabaseClient
-                .from('klanten')
-                .select('id, naam')
-                .order('naam', { ascending: true });
-            
-            if (!error && data) {
-                klantSelect.innerHTML = '<option value="">-- Selecteer een klant --</option>';
-                data.forEach(klant => {
-                    const option = document.createElement('option');
-                    option.value = klant.id;
-                    option.textContent = klant.naam;
-                    klantSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('❌ Fout bij laden klanten:', error);
-        }
-    }
 }
 
 // ============================================
@@ -1763,7 +1805,7 @@ async function beëindigVerhuur(verhuurId) {
         if (verhuurData && verhuurData.fiets_id) {
             const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
-                .update({ status: 'beschikbar' })
+                .update({ status: 'beschikbaar' })
                 .eq('id', verhuurData.fiets_id);
             
             if (fietsError) throw fietsError;
