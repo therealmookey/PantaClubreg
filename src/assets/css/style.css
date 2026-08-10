@@ -8,11 +8,22 @@
     box-sizing: border-box;
 }
 
+/* ============================================
+   BODY - FLEX CONTAINER VOOR FOOTER
+   ============================================ */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     background-color: #F8F6F3;
     color: #1A2B4C;
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
 }
 
@@ -29,6 +40,23 @@ body {
 /* ============================================
    MAIN CONTENT - 80% (via container class)
    ============================================ */
+#main-content {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+#main-content .container {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
+#content-wrapper {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
 .container {
     max-width: 80%;
     width: 80%;
@@ -74,6 +102,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 1000;
+    flex-shrink: 0;
 }
 
 .navbar .container-full {
@@ -167,30 +196,23 @@ body {
 }
 
 /* ============================================
-   MAIN
-   ============================================ */
-main {
-    display: block;
-    padding: 20px 0;
-    min-height: 60vh;
-}
-
-/* ============================================
-   FOOTER
+   FOOTER - ALTIJD ONDERAAN
    ============================================ */
 .site-footer {
+    flex-shrink: 0;
     background-color: var(--primary-blue);
     color: rgba(255,255,255,0.7);
     padding: 25px 0;
-    margin-top: 40px;
+    margin-top: 0;
     text-align: center;
+    width: 100%;
 }
 
 .site-footer .container-full {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .site-footer strong {
@@ -205,7 +227,6 @@ main {
 @media (max-width: 480px) {
     .site-footer {
         padding: 20px 0;
-        margin-top: 30px;
     }
     
     .site-footer p {
@@ -252,6 +273,17 @@ main {
     background-color: #D4682E;
     transform: translateY(-2px);
     box-shadow: var(--shadow-soft);
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 2px solid var(--primary-blue);
+    color: var(--primary-blue);
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-blue);
+    color: var(--text-light);
 }
 
 .btn-group {
@@ -559,20 +591,27 @@ table tbody tr:hover {
 }
 
 /* ============================================
-   ALGEMENE RESPONSIVE FIXES
+   BADGES
    ============================================ */
-img {
-    max-width: 100%;
-    height: auto;
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
-@media (max-width: 480px) {
-    body {
-        font-size: 15px;
-    }
-    
-    h1 { font-size: 1.8rem; }
-    h2 { font-size: 1.4rem; }
-    h3 { font-size: 1.2rem; }
-    h4 { font-size: 1rem; }
+.badge-available {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-rented {
+    background-color: var(--accent-orange);
+    color: white;
+}
+
+.badge-maintenance {
+    background-color: #dc3545;
+    color: white;
 }
