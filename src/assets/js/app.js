@@ -1247,6 +1247,9 @@ async function loadVerhuur() {
             return;
         }
         
+        // ============================================
+        // TABEL MET "DAGEN IN BEZIT" KOLOM
+        // ============================================
         let html = `
             <div class="table-responsive">
                 <table>
@@ -1256,6 +1259,7 @@ async function loadVerhuur() {
                             <th>Klant</th>
                             <th>Start</th>
                             <th>Eind</th>
+                            <th>Dagen in bezit</th>
                             <th>Status</th>
                             <th style="text-align:center;">Acties</th>
                         </tr>
@@ -1272,15 +1276,36 @@ async function loadVerhuur() {
             const statusClass = isActief ? 'badge-rented' : 'badge-available';
             const statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
             
-            const startDatum = new Date(verhuur.start_datum).toLocaleDateString('nl-BE');
-            const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum).toLocaleDateString('nl-BE') : '-';
+            const startDatum = new Date(verhuur.start_datum);
+            const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
+            
+            // ============================================
+            // BEREKEN AANTAL DAGEN
+            // ============================================
+            const tijdVerschil = eindDatum - startDatum;
+            const dagenInBezit = Math.floor(tijdVerschil / (1000 * 60 * 60 * 24));
+            
+            const startDatumStr = startDatum.toLocaleDateString('nl-BE');
+            const eindDatumStr = verhuur.eind_datum ? eindDatum.toLocaleDateString('nl-BE') : '-';
+            
+            // Kleurcode voor dagen
+            let dagenKleur = '#28a745'; // Groen (0-30 dagen)
+            if (dagenInBezit > 30 && dagenInBezit <= 90) {
+                dagenKleur = '#ffc107'; // Geel (31-90 dagen)
+            } else if (dagenInBezit > 90) {
+                dagenKleur = '#dc3545'; // Rood (>90 dagen)
+            }
             
             html += `
                 <tr id="verhuur-${verhuur.id}">
                     <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
                     <td><strong>${klantInfo.naam}</strong></td>
-                    <td>${startDatum}</td>
-                    <td>${eindDatum}</td>
+                    <td>${startDatumStr}</td>
+                    <td>${eindDatumStr}</td>
+                    <td style="font-weight:600;color:${dagenKleur};">
+                        ${dagenInBezit} ${dagenInBezit === 1 ? 'dag' : 'dagen'}
+                        ${isActief ? '⏳' : ''}
+                    </td>
                     <td><span class="badge ${statusClass}">${statusText}</span></td>
                     <td style="text-align:center;">
                         ${isActief ? `
