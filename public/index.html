@@ -11,58 +11,60 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <!-- ============================================
-         EXTERNE CSS (aparte bestanden)
+         EXTERNE CSS
          ============================================ -->
     <link rel="stylesheet" href="../src/assets/css/style.css">
     <link rel="stylesheet" href="../src/assets/css/components.css">
 </head>
 <body>
     <!-- ============================================
-         NAVIGATIE
+         EERSTE WRAPPER - FORCEERT 80%
          ============================================ -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="navbar-brand">
-                <span>🚲 Panta Club</span>
+    <div id="app-wrapper" style="max-width: 80% !important; width: 80% !important; margin: 0 auto !important; padding: 0 20px !important;">
+    
+        <!-- NAVIGATIE -->
+        <nav class="navbar">
+            <div class="container">
+                <div class="navbar-brand">
+                    <span>🚲 Panta Club</span>
+                </div>
+                
+                <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
+                    ☰
+                </button>
+                
+                <ul class="navbar-links" id="navbarLinks">
+                    <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
+                    <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
+                    <li><a href="#" data-page="klanten">👤 Klanten</a></li>
+                    <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
+                    <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
+                </ul>
             </div>
-            
-            <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
-                ☰
-            </button>
-            
-            <ul class="navbar-links" id="navbarLinks">
-                <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
-                <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
-                <li><a href="#" data-page="klanten">👤 Klanten</a></li>
-                <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
-                <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
-            </ul>
-        </div>
-    </nav>
-    
-    <!-- ============================================
-         HOOFD INHOUD
-         ============================================ -->
-    <main id="main-content">
-        <div class="container">
-            <!-- Dashboard wordt hier geladen -->
-        </div>
-    </main>
-    
-    <!-- ============================================
-         FOOTER
-         ============================================ -->
-    <footer class="site-footer">
-        <div class="container">
-            <p style="margin-bottom: 5px;">
-                &copy; 2026 <strong>Panta Club</strong> 
-                - Fietsregistratie Platform
-            </p>
-            <p style="font-size: 0.85rem; margin: 0;">
-                Gebouwd met &#10084; voor een veilige en overzichtelijke fietsadministratie
-            </p>
-        </div>
-    </footer>
+        </nav>
+        
+        <!-- HOOFD INHOUD -->
+        <main id="main-content">
+            <div class="container">
+                <!-- Dashboard wordt hier geladen -->
+            </div>
+        </main>
+        
+        <!-- FOOTER -->
+        <footer class="site-footer">
+            <div class="container">
+                <p style="margin-bottom: 5px;">
+                    &copy; 2026 <strong>Panta Club</strong> 
+                    - Fietsregistratie Platform
+                </p>
+                <p style="font-size: 0.85rem; margin: 0;">
+                    Gebouwd met &#10084; voor een veilige en overzichtelijke fietsadministratie
+                </p>
+            </div>
+        </footer>
+        
+    </div>
+    <!-- ===== EINDE WRAPPER ===== -->
     
     <!-- ============================================
          JAVASCRIPT
@@ -74,6 +76,7 @@
         
         console.log('🚀 Panta Club Fietsregistratie gestart!');
         console.log('✅ CSS wordt geladen uit aparte bestanden');
+        console.log('📐 Container breedte: 80%');
         
         // ============================================
         // PAGINA'S
