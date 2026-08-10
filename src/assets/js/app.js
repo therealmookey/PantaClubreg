@@ -523,4 +523,93 @@ async function handleFietsSubmit(event) {
     
     button.textContent = '⏳ Bezig...';
     button.disabled = true;
-    messageDiv.innerHTML =
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
+    
+    try {
+        const qrCode = `https://therealmookey.github.io/PantaClubreg/fiets/${serienummer}`;
+        
+        const { error } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .insert([{
+                serienummer: serienummer,
+                model_id: modelId,
+                status: status,
+                qr_code: qrCode
+            }]);
+        
+        if (error) throw error;
+        
+        messageDiv.innerHTML = `<p style="color: #28a745;">✅ Fiets ${serienummer} succesvol toegevoegd!</p>`;
+        document.getElementById('fietsForm').reset();
+        
+        setTimeout(() => {
+            hideAddFietsForm();
+            loadFietsen();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
+// STATISTIEKEN
+// ============================================
+
+async function loadStats() {
+    try {
+        if (!window.supabaseClient) return;
+        
+        const { count: modellenCount } = await window.supabaseClient
+            .from('fiets_modellen')
+            .select('*', { count: 'exact', head: true });
+        
+        const { count: fietsenCount } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select('*', { count: 'exact', head: true });
+        
+        const el1 = document.getElementById('stat-modellen');
+        const el2 = document.getElementById('stat-fietsen');
+        if (el1) el1.textContent = modellenCount || 0;
+        if (el2) el2.textContent = fietsenCount || 0;
+    } catch (error) {
+        console.error('❌ Fout bij laden statistieken:', error);
+    }
+}
+
+// ============================================
+// DASHBOARD
+// ============================================
+
+function loadDashboard() {
+    console.log('📊 Dashboard laden...');
+    navigateTo('dashboard');
+}
+
+// ============================================
+// HULPFUNCTIES
+// ============================================
+
+function showMessage(message) {
+    alert('📢 ' + message);
+}
+
+// ============================================
+// EXPORTEER FUNCTIES
+// ============================================
+
+window.navigateTo = navigateTo;
+window.showMessage = showMessage;
+window.showAddModelForm = showAddModelForm;
+window.hideAddModelForm = hideAddModelForm;
+window.loadModellen = loadModellen;
+window.showAddFietsForm = showAddFietsForm;
+window.hideAddFietsForm = hideAddFietsForm;
+window.loadFietsen = loadFietsen;
+window.loadStats = loadStats;
+window.loadDashboard = loadDashboard;
+
+console.log('✅ Applicatie klaar voor gebruik');
