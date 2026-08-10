@@ -615,3 +615,47 @@ table tbody tr:hover {
     background-color: #dc3545;
     color: white;
 }
+/* ============================================
+   KLEINE KNOMMEN
+   ============================================ */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-height: auto;
+    min-width: auto;
+    border-radius: 50px;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+/* Form controls voor bewerken */
+.form-control {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px rgba(26, 43, 76, 0.1);
+}

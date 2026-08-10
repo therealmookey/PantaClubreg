@@ -7,7 +7,7 @@
 console.log('🚀 Panta Club Fietsregistratie start...');
 
 // ============================================
-// STARTUP - RENDER NAVIGATIE EN FOOTER
+// STARTUP
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -330,26 +330,183 @@ async function loadModellen() {
             return;
         }
         
-        let html = `<div class="table-responsive"><table><thead><tr><th>Merk</th><th>Model</th><th>Kleur</th><th>Acties</th></tr></thead><tbody>`;
+        let html = `
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Merk</th>
+                            <th>Model</th>
+                            <th>Kleur</th>
+                            <th style="text-align:center;">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
         
         data.forEach(model => {
+            const kleurStyle = `display:inline-block;width:20px;height:20px;border-radius:50%;background:${model.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;`;
+            
             html += `
-                <tr>
+                <tr id="model-${model.id}">
                     <td><strong>${model.merk}</strong></td>
                     <td>${model.model}</td>
-                    <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${model.kleur.toLowerCase()};border:1px solid #ddd;"></span> ${model.kleur}</td>
-                    <td><button class="btn btn-sm btn-outline" onclick="window.showMessage('Detail van ${model.merk} ${model.model} komt binnenkort!')">📋 Detail</button></td>
+                    <td><span style="${kleurStyle}"></span> ${model.kleur}</td>
+                    <td style="text-align:center;">
+                        <button class="btn btn-sm btn-primary" onclick="window.editModel('${model.id}')" style="margin-right:5px;">
+                            ✏️ Bewerken
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="window.deleteModel('${model.id}')">
+                            🗑️ Verwijderen
+                        </button>
+                    </td>
                 </tr>
             `;
         });
         
-        html += `</tbody></table></div><p style="color:#999;font-size:0.85rem;margin-top:10px;">Totaal: ${data.length} modellen</p>`;
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+                Totaal: ${data.length} modellen
+            </p>
+        `;
+        
         lijst.innerHTML = html;
     } catch (error) {
         console.error('❌ Fout:', error);
         lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
     }
 }
+
+// ============================================
+// MODEL BEWERKEN
+// ============================================
+
+function editModel(modelId) {
+    console.log('✏️ Bewerken van model:', modelId);
+    
+    const row = document.getElementById(`model-${modelId}`);
+    if (!row) {
+        showMessage('Model niet gevonden!');
+        return;
+    }
+    
+    const cells = row.querySelectorAll('td');
+    const merk = cells[0].textContent.trim();
+    const model = cells[1].textContent.trim();
+    const kleur = cells[2].textContent.trim();
+    
+    row.innerHTML = `
+        <td>
+            <input type="text" id="edit-merk-${modelId}" value="${merk}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-model-${modelId}" value="${model}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-kleur-${modelId}" value="${kleur}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td style="text-align:center;">
+            <button class="btn btn-sm btn-success" onclick="window.saveModel('${modelId}')" style="margin-right:5px;">
+                💾 Opslaan
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="window.cancelEditModel('${modelId}')">
+                ❌ Annuleren
+            </button>
+        </td>
+    `;
+}
+
+// ============================================
+// MODEL OPSLAAN
+// ============================================
+
+async function saveModel(modelId) {
+    console.log('💾 Opslaan van model:', modelId);
+    
+    const merkInput = document.getElementById(`edit-merk-${modelId}`);
+    const modelInput = document.getElementById(`edit-model-${modelId}`);
+    const kleurInput = document.getElementById(`edit-kleur-${modelId}`);
+    
+    if (!merkInput || !modelInput || !kleurInput) {
+        showMessage('Fout: kan velden niet vinden.');
+        return;
+    }
+    
+    const merk = merkInput.value.trim();
+    const model = modelInput.value.trim();
+    const kleur = kleurInput.value.trim();
+    
+    if (!merk || !model || !kleur) {
+        showMessage('❌ Alle velden zijn verplicht!');
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('fiets_modellen')
+            .update({ merk, model, kleur })
+            .eq('id', modelId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Model succesvol bijgewerkt!');
+        loadModellen();
+        
+    } catch (error) {
+        console.error('❌ Fout bij opslaan:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// MODEL BEWERKING ANNULEREN
+// ============================================
+
+function cancelEditModel(modelId) {
+    console.log('❌ Bewerking geannuleerd voor:', modelId);
+    loadModellen();
+}
+
+// ============================================
+// MODEL VERWIJDEREN
+// ============================================
+
+async function deleteModel(modelId) {
+    console.log('🗑️ Verwijderen van model:', modelId);
+    
+    if (!confirm('Weet je zeker dat je dit model wilt verwijderen?\n\nLet op: Als er fietsen aan dit model zijn gekoppeld, kan dit niet!')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('fiets_modellen')
+            .delete()
+            .eq('id', modelId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Model succesvol verwijderd!');
+        loadModellen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        
+        if (error.message && error.message.includes('foreign key')) {
+            showMessage('❌ Dit model kan niet worden verwijderd omdat er nog fietsen aan zijn gekoppeld.');
+        } else {
+            showMessage('❌ Fout: ' + error.message);
+        }
+    }
+}
+
+// ============================================
+// MODEL SUBMIT
+// ============================================
 
 document.addEventListener('submit', async function(event) {
     if (event.target.id === 'modelForm') {
@@ -611,5 +768,11 @@ window.hideAddFietsForm = hideAddFietsForm;
 window.loadFietsen = loadFietsen;
 window.loadStats = loadStats;
 window.loadDashboard = loadDashboard;
+
+// Nieuwe functies voor bewerken en verwijderen
+window.editModel = editModel;
+window.saveModel = saveModel;
+window.cancelEditModel = cancelEditModel;
+window.deleteModel = deleteModel;
 
 console.log('✅ Applicatie klaar voor gebruik');
