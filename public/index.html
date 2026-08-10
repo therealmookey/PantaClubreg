@@ -18,53 +18,51 @@
 </head>
 <body>
     <!-- ============================================
-         EERSTE WRAPPER - FORCEERT 80%
+         NAVIGATIE - 100% BREEDTE
          ============================================ -->
-    <div id="app-wrapper" style="max-width: 80% !important; width: 80% !important; margin: 0 auto !important; padding: 0 20px !important;">
+    <nav class="navbar">
+        <div class="container-full">
+            <div class="navbar-brand">
+                <span>🚲 Panta Club</span>
+            </div>
+            
+            <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
+                ☰
+            </button>
+            
+            <ul class="navbar-links" id="navbarLinks">
+                <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
+                <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
+                <li><a href="#" data-page="klanten">👤 Klanten</a></li>
+                <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
+                <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
+            </ul>
+        </div>
+    </nav>
     
-        <!-- NAVIGATIE -->
-        <nav class="navbar">
-            <div class="container">
-                <div class="navbar-brand">
-                    <span>🚲 Panta Club</span>
-                </div>
-                
-                <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
-                    ☰
-                </button>
-                
-                <ul class="navbar-links" id="navbarLinks">
-                    <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
-                    <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
-                    <li><a href="#" data-page="klanten">👤 Klanten</a></li>
-                    <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
-                    <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
-                </ul>
-            </div>
-        </nav>
-        
-        <!-- HOOFD INHOUD -->
-        <main id="main-content">
-            <div class="container">
-                <!-- Dashboard wordt hier geladen -->
-            </div>
-        </main>
-        
-        <!-- FOOTER -->
-        <footer class="site-footer">
-            <div class="container">
-                <p style="margin-bottom: 5px;">
-                    &copy; 2026 <strong>Panta Club</strong> 
-                    - Fietsregistratie Platform
-                </p>
-                <p style="font-size: 0.85rem; margin: 0;">
-                    Gebouwd met &#10084; voor een veilige en overzichtelijke fietsadministratie
-                </p>
-            </div>
-        </footer>
-        
-    </div>
-    <!-- ===== EINDE WRAPPER ===== -->
+    <!-- ============================================
+         MAIN CONTENT - 80% BREEDTE
+         ============================================ -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Dashboard wordt hier geladen -->
+        </div>
+    </main>
+    
+    <!-- ============================================
+         FOOTER - 100% BREEDTE
+         ============================================ -->
+    <footer class="site-footer">
+        <div class="container-full">
+            <p style="margin-bottom: 5px;">
+                &copy; 2026 <strong>Panta Club</strong> 
+                - Fietsregistratie Platform
+            </p>
+            <p style="font-size: 0.85rem; margin: 0;">
+                Gebouwd met &#10084; voor een veilige en overzichtelijke fietsadministratie
+            </p>
+        </div>
+    </footer>
     
     <!-- ============================================
          JAVASCRIPT
@@ -75,8 +73,8 @@
         // ============================================
         
         console.log('🚀 Panta Club Fietsregistratie gestart!');
-        console.log('✅ CSS wordt geladen uit aparte bestanden');
-        console.log('📐 Container breedte: 80%');
+        console.log('📐 Navigatie en footer: 100% breed');
+        console.log('📐 Main content: 80% breed');
         
         // ============================================
         // PAGINA'S
