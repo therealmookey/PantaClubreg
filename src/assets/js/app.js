@@ -164,9 +164,52 @@ const PAGES = {
                 Elke fiets is gekoppeld aan een model uit de <strong>"Fietsmodellen"</strong> lijst.
             </p>
             
-            <button class="btn btn-accent" onclick="window.showAddFietsForm()" style="margin-bottom: 20px;">
-                ➕ Nieuwe fiets toevoegen
-            </button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                <button class="btn btn-accent" onclick="window.showAddFietsForm()">
+                    ➕ Nieuwe fiets toevoegen
+                </button>
+                <button class="btn btn-accent" onclick="window.showFietsExcelImport()">
+                    📊 Importeer Excel (Stocklijst)
+                </button>
+            </div>
+            
+            <!-- FIETS EXCEL IMPORT MODAL -->
+            <div id="fietsExcelImportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>📊 Excel Import - Fietsen (Stocklijst)</h3>
+                        <button onclick="window.closeFietsExcelImport()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✕</button>
+                    </div>
+                    
+                    <p style="color: #666; margin-bottom: 15px;">
+                        Upload een Excel bestand (.xlsx of .xls) met fietsgegevens.
+                        <br><small style="color: #999;">De eerste rij moet de kolomnamen bevatten.</small>
+                        <br><small style="color: #999;">Gebruik het tabblad <strong>"stocklijst"</strong>.</small>
+                    </p>
+                    
+                    <div style="border: 2px dashed #E0DCD6; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer;" 
+                         ondrop="window.handleFietsExcelDrop(event)" ondragover="event.preventDefault()" onclick="document.getElementById('fietsExcelFileInput').click()">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">📁</div>
+                        <p><strong>Klik hier</strong> of sleep een Excel bestand naar dit vak</p>
+                        <p style="color: #999; font-size: 0.85rem;">Ondersteunt .xlsx en .xls</p>
+                        <input type="file" id="fietsExcelFileInput" accept=".xlsx,.xls" style="display: none;" onchange="window.handleFietsExcelFile(event)">
+                    </div>
+                    
+                    <div id="fietsExcelPreview" style="display: none; margin-bottom: 20px;">
+                        <h4>📋 Voorbeeld van de data</h4>
+                        <div id="fietsExcelPreviewContent" style="overflow-x: auto; max-height: 300px; border: 1px solid #E0DCD6; border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                    
+                    <div id="fietsExcelImportStatus" style="margin-bottom: 15px;"></div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="fietsExcelImportBtn" class="btn btn-accent" onclick="window.importFietsExcelData()" style="display: none;">
+                            💾 Importeer data
+                        </button>
+                        <button class="btn btn-outline" onclick="window.closeFietsExcelImport()">Annuleren</button>
+                    </div>
+                </div>
+            </div>
             
             <!-- ZOEKBALK -->
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -652,8 +695,7 @@ function editModel(modelId) {
 }
 
 // ============================================
-// MODEL OPSLAAN
-// ============================================
+// MODEL OPSLAAN// ============================================
 
 async function saveModel(modelId) {
     console.log('💾 Opslaan van model:', modelId);
@@ -1175,6 +1217,328 @@ async function handleFietsSubmit(event) {
 }
 
 // ============================================
+// FIETSEN EXCEL IMPORT (STOCKLIJST)
+// ============================================
+
+let fietsExcelData = [];
+let fietsExcelHeaders = [];
+
+function showFietsExcelImport() {
+    const modal = document.getElementById('fietsExcelImportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    document.getElementById('fietsExcelImportStatus').innerHTML = '';
+    document.getElementById('fietsExcelPreview').style.display = 'none';
+    document.getElementById('fietsExcelImportBtn').style.display = 'none';
+    fietsExcelData = [];
+    fietsExcelHeaders = [];
+}
+
+function closeFietsExcelImport() {
+    const modal = document.getElementById('fietsExcelImportModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('fietsExcelFileInput').value = '';
+}
+
+function handleFietsExcelFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    processFietsExcelFile(file);
+}
+
+function handleFietsExcelDrop(event) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+    processFietsExcelFile(file);
+}
+
+function processFietsExcelFile(file) {
+    const reader = new FileReader();
+    const statusDiv = document.getElementById('fietsExcelImportStatus');
+    
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bestand wordt gelezen...</p>';
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Zoek het tabblad "stocklijst"
+            let sheetName = 'stocklijst';
+            if (!workbook.SheetNames.includes(sheetName)) {
+                sheetName = workbook.SheetNames[0];
+                console.warn('⚠️ Tabblad "stocklijst" niet gevonden, gebruik:', sheetName);
+            }
+            
+            const sheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+            
+            if (!jsonData || jsonData.length === 0) {
+                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Geen data gevonden in het bestand.</p>';
+                return;
+            }
+            
+            fietsExcelHeaders = Object.keys(jsonData[0]);
+            fietsExcelData = jsonData;
+            
+            showFietsExcelPreview(jsonData);
+            
+            statusDiv.innerHTML = `
+                <p style="color: #28a745;">✅ ${jsonData.length} fietsen gevonden.</p>
+                <p style="color: #666; font-size:0.85rem;">Kolommen: ${fietsExcelHeaders.join(', ')}</p>
+            `;
+            
+            document.getElementById('fietsExcelImportBtn').style.display = 'inline-block';
+            
+        } catch (error) {
+            console.error('❌ Fout bij lezen Excel:', error);
+            statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout bij lezen: ${error.message}</p>`;
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+function showFietsExcelPreview(data) {
+    const previewDiv = document.getElementById('fietsExcelPreview');
+    const contentDiv = document.getElementById('fietsExcelPreviewContent');
+    
+    if (!previewDiv || !contentDiv) return;
+    
+    const previewData = data.slice(0, 10);
+    
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+    html += '<thead><tr style="background:#1A2B4C;color:white;">';
+    fietsExcelHeaders.forEach(header => {
+        html += `<th style="padding:8px 12px;text-align:left;white-space:nowrap;">${header}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    previewData.forEach(row => {
+        html += '<tr>';
+        fietsExcelHeaders.forEach(header => {
+            const value = row[header] || '';
+            html += `<td style="padding:6px 12px;border-bottom:1px solid #eee;">${value}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    if (data.length > 10) {
+        html += `<tr><td colspan="${fietsExcelHeaders.length}" style="padding:8px 12px;color:#999;font-style:italic;">... en ${data.length - 10} rijen meer</td></tr>`;
+    }
+    
+    html += '</tbody></table>';
+    contentDiv.innerHTML = html;
+    previewDiv.style.display = 'block';
+}
+
+async function importFietsExcelData() {
+    if (!fietsExcelData || fietsExcelData.length === 0) {
+        alert('❌ Geen data om te importeren.');
+        return;
+    }
+    
+    const statusDiv = document.getElementById('fietsExcelImportStatus');
+    const importBtn = document.getElementById('fietsExcelImportBtn');
+    
+    if (!confirm(`Weet je zeker dat je ${fietsExcelData.length} fietsen wilt importeren?`)) {
+        return;
+    }
+    
+    importBtn.disabled = true;
+    importBtn.textContent = '⏳ Bezig...';
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met importeren...</p>';
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let errors = [];
+    let newModels = [];
+    let matchedModels = [];
+    
+    try {
+        // Haal bestaande modellen op
+        const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
+            .from('fiets_modellen')
+            .select('*');
+        
+        if (modellenError) throw modellenError;
+        
+        // Haal bestaande fietsen op voor duplicate check
+        const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select('serienummer');
+        
+        if (fietsenError) throw fietsenError;
+        
+        const bestaandeSerienummers = new Set(bestaandeFietsen.map(f => f.serienummer));
+        
+        // Haal klanten op voor koppeling
+        const { data: alleKlanten, error: klantenError } = await window.supabaseClient
+            .from('klanten')
+            .select('id, naam');
+        
+        if (klantenError) throw klantenError;
+        
+        for (let i = 0; i < fietsExcelData.length; i++) {
+            const row = fietsExcelData[i];
+            
+            // 1. SERIENUMMER
+            const serienummer = String(row.Serienummer || '').trim();
+            if (!serienummer) {
+                errorCount++;
+                errors.push(`Rij ${i + 1}: Geen serienummer gevonden`);
+                continue;
+            }
+            
+            if (bestaandeSerienummers.has(serienummer)) {
+                errorCount++;
+                errors.push(`Rij ${i + 1}: Serienummer ${serienummer} bestaat al`);
+                continue;
+            }
+            
+            // 2. MODEL (Type + Kleur)
+            const type = String(row.Type || '').trim();
+            const kleur = String(row.Kleur || '').trim();
+            const merk = 'WOOM';
+            
+            let modelId = null;
+            let modelMatch = null;
+            
+            if (type) {
+                modelMatch = bestaandeModellen.find(m => 
+                    m.model === type && 
+                    m.kleur === kleur &&
+                    m.merk === merk
+                );
+            }
+            
+            if (modelMatch) {
+                modelId = modelMatch.id;
+                matchedModels.push(`${merk} - ${type} (${kleur})`);
+            } else if (type) {
+                const { data: newModel, error: newModelError } = await window.supabaseClient
+                    .from('fiets_modellen')
+                    .insert([{ 
+                        merk: merk, 
+                        model: type, 
+                        kleur: kleur || 'Onbekend' 
+                    }])
+                    .select();
+                
+                if (newModelError) {
+                    errorCount++;
+                    errors.push(`Rij ${i + 1}: Fout bij aanmaken model: ${newModelError.message}`);
+                    continue;
+                }
+                modelId = newModel[0].id;
+                newModels.push(`${merk} - ${type} (${kleur || 'Onbekend'})`);
+            } else {
+                errorCount++;
+                errors.push(`Rij ${i + 1}: Geen type (model) gevonden`);
+                continue;
+            }
+            
+            // 3. STATUS
+            const statusRaw = String(row.Status || '').trim().toLowerCase();
+            let fietsStatus = 'beschikbaar';
+            if (statusRaw.includes('verhuurd') || statusRaw.includes('huur')) {
+                fietsStatus = 'verhuurd';
+            } else if (statusRaw.includes('onderhoud') || statusRaw.includes('reparatie')) {
+                fietsStatus = 'in-onderhoud';
+            }
+            
+            // 4. KLANT KOPPELING
+            let klantId = null;
+            const klantNaam = String(row.Klant || '').trim();
+            if (klantNaam) {
+                const klantMatch = alleKlanten.find(k => 
+                    k.naam.toLowerCase().includes(klantNaam.toLowerCase()) ||
+                    klantNaam.toLowerCase().includes(k.naam.toLowerCase())
+                );
+                if (klantMatch) {
+                    klantId = klantMatch.id;
+                }
+            }
+            
+            // 5. NOTITIES
+            let notities = String(row.Notities || '').trim();
+            const oorsprongSerie = String(row['Oorsprong Serienr.'] || '').trim();
+            if (oorsprongSerie) {
+                notities = notities ? `${notities} | Oorsprong: ${oorsprongSerie}` : `Oorsprong: ${oorsprongSerie}`;
+            }
+            
+            // 6. AANKOOP DATUM
+            let aankoopDatum = null;
+            if (row['Aangekocht']) {
+                try {
+                    const datum = new Date(row['Aangekocht']);
+                    if (!isNaN(datum)) {
+                        aankoopDatum = datum.toISOString().split('T')[0];
+                    }
+                } catch (e) {}
+            }
+            
+            // 7. FIETS OPSLAAN
+            const { error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .insert([{
+                    serienummer: serienummer,
+                    model_id: modelId,
+                    status: fietsStatus,
+                    huidige_klant_id: klantId || null,
+                    opmerkingen: notities || null,
+                    aankoop_datum: aankoopDatum || null,
+                    qr_code: `https://therealmookey.github.io/PantaClubreg/fiets/${serienummer}`
+                }]);
+            
+            if (fietsError) {
+                errorCount++;
+                errors.push(`Rij ${i + 1}: ${fietsError.message}`);
+                console.error('❌ Fout bij importeren fiets:', fietsError);
+            } else {
+                successCount++;
+                bestaandeSerienummers.add(serienummer);
+            }
+        }
+        
+        let resultMessage = `✅ ${successCount} fietsen succesvol geïmporteerd.`;
+        if (newModels.length > 0) {
+            resultMessage += `\n📦 Nieuwe modellen aangemaakt: ${newModels.length}`;
+        }
+        if (matchedModels.length > 0) {
+            resultMessage += `\n🔗 Bestaande modellen gebruikt: ${matchedModels.length}`;
+        }
+        if (errorCount > 0) {
+            resultMessage += `\n⚠️ ${errorCount} fouten: ${errors.slice(0, 5).join('; ')}${errors.length > 5 ? `... en ${errors.length - 5} meer` : ''}`;
+        }
+        
+        statusDiv.innerHTML = `<p style="color: ${errorCount > 0 && successCount === 0 ? '#dc3545' : errorCount > 0 ? '#ffc107' : '#28a745'};">${resultMessage}</p>`;
+        
+        if (successCount > 0) {
+            loadFietsen();
+            loadStats();
+        }
+        
+        if (errorCount === 0) {
+            setTimeout(() => {
+                closeFietsExcelImport();
+            }, 3000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Fout bij importeren:', error);
+        statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
+    } finally {
+        importBtn.disabled = false;
+        importBtn.textContent = '💾 Importeer data';
+    }
+}
+
+// ============================================
 // KLANTEN FUNCTIES
 // ============================================
 
@@ -1521,7 +1885,8 @@ async function handleKlantSubmit(event) {
 }
 
 // ============================================
-// KLANT EXCEL IMPORT FUNCTIES// ============================================
+// KLANT EXCEL IMPORT (SUBSCRIBERS)
+// ============================================
 
 let excelData = [];
 let excelHeaders = [];
@@ -2474,6 +2839,13 @@ window.editFiets = editFiets;
 window.saveFiets = saveFiets;
 window.deleteFiets = deleteFiets;
 
+// Fietsen Excel Import (Stocklijst)
+window.showFietsExcelImport = showFietsExcelImport;
+window.closeFietsExcelImport = closeFietsExcelImport;
+window.handleFietsExcelFile = handleFietsExcelFile;
+window.handleFietsExcelDrop = handleFietsExcelDrop;
+window.importFietsExcelData = importFietsExcelData;
+
 // Klanten
 window.showAddKlantForm = showAddKlantForm;
 window.hideAddKlantForm = hideAddKlantForm;
@@ -2485,7 +2857,7 @@ window.deleteKlant = deleteKlant;
 window.filterKlanten = filterKlanten;
 window.resetKlantFilter = resetKlantFilter;
 
-// Klant Excel Import
+// Klant Excel Import (Subscribers)
 window.showExcelImport = showExcelImport;
 window.closeExcelImport = closeExcelImport;
 window.handleExcelFile = handleExcelFile;
