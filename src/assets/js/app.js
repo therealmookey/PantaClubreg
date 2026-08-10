@@ -162,12 +162,25 @@ const PAGES = {
             <p style="color: #666; margin-bottom: 20px;">
                 Beheer hier de individuele fietsen met serienummer. 
                 Elke fiets is gekoppeld aan een model uit de <strong>"Fietsmodellen"</strong> lijst.
-                Dit zijn de <strong>"schoenen"</strong> die in de dozen passen.
             </p>
             
             <button class="btn btn-accent" onclick="window.showAddFietsForm()" style="margin-bottom: 20px;">
                 ➕ Nieuwe fiets toevoegen
             </button>
+            
+            <!-- ZOEKBALK -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <input type="text" id="fietsZoekInput" placeholder="🔍 Zoek op serienummer, merk of model..." 
+                       style="flex:1;min-width:200px;padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
+                <select id="fietsStatusFilter" style="padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
+                    <option value="">Alle statussen</option>
+                    <option value="beschikbaar">Beschikbaar</option>
+                    <option value="verhuurd">Verhuurd</option>
+                    <option value="in-onderhoud">In onderhoud</option>
+                </select>
+                <button class="btn btn-primary" onclick="window.filterFietsen()">🔍 Zoeken</button>
+                <button class="btn btn-outline" onclick="window.resetFietsFilter()">🔄 Reset</button>
+            </div>
             
             <div id="addFietsForm" style="display: none; margin-bottom: 30px;">
                 <div class="card">
@@ -220,6 +233,14 @@ const PAGES = {
                 ➕ Nieuwe klant toevoegen
             </button>
             
+            <!-- ZOEKBALK -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <input type="text" id="klantZoekInput" placeholder="🔍 Zoek op naam, e-mail of telefoon..." 
+                       style="flex:1;min-width:200px;padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
+                <button class="btn btn-primary" onclick="window.filterKlanten()">🔍 Zoeken</button>
+                <button class="btn btn-outline" onclick="window.resetKlantFilter()">🔄 Reset</button>
+            </div>
+            
             <div id="addKlantForm" style="display: none; margin-bottom: 30px;">
                 <div class="card">
                     <h3>Nieuwe klant toevoegen</h3>
@@ -268,6 +289,19 @@ const PAGES = {
             <button class="btn btn-accent" onclick="window.showAddVerhuurForm()" style="margin-bottom: 20px;">
                 ➕ Nieuwe verhuur starten
             </button>
+            
+            <!-- ZOEKBALK -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <input type="text" id="verhuurZoekInput" placeholder="🔍 Zoek op fiets, klant of serienummer..." 
+                       style="flex:1;min-width:200px;padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
+                <select id="verhuurStatusFilter" style="padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
+                    <option value="">Alle verhuur</option>
+                    <option value="actief">Actief</option>
+                    <option value="afgerond">Afgerond</option>
+                </select>
+                <button class="btn btn-primary" onclick="window.filterVerhuur()">🔍 Zoeken</button>
+                <button class="btn btn-outline" onclick="window.resetVerhuurFilter()">🔄 Reset</button>
+            </div>
             
             <div id="addVerhuurForm" style="display: none; margin-bottom: 30px;">
                 <div class="card">
@@ -714,86 +748,249 @@ async function loadModelSelectOptions() {
     }
 }
 
-async function loadFietsen() {
-    console.log('📥 Laden van fietsen...');
+// ============================================
+// FIETSEN ZOEKEN & FILTEREN
+// ============================================
+
+let alleFietsen = [];
+
+async function filterFietsen() {
+    const zoekTerm = document.getElementById('fietsZoekInput').value.toLowerCase().trim();
+    const statusFilter = document.getElementById('fietsStatusFilter').value;
+    
+    if (alleFietsen.length === 0) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .select(`*, fiets_modellen (merk, model, kleur)`)
+                .order('aangemaakt_op', { ascending: false });
+            
+            if (error) throw error;
+            alleFietsen = data || [];
+        } catch (error) {
+            console.error('❌ Fout bij laden:', error);
+            return;
+        }
+    }
+    
+    let gefilterd = alleFietsen;
+    
+    if (zoekTerm) {
+        gefilterd = gefilterd.filter(fiets => {
+            const modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
+            const zoekString = `${fiets.serienummer} ${modelInfo.merk} ${modelInfo.model} ${modelInfo.kleur}`.toLowerCase();
+            return zoekString.includes(zoekTerm);
+        });
+    }
+    
+    if (statusFilter) {
+        gefilterd = gefilterd.filter(fiets => fiets.status === statusFilter);
+    }
+    
+    toonFietsenLijst(gefilterd, `Totaal: ${gefilterd.length} fietsen (gefilterd)`);
+}
+
+function resetFietsFilter() {
+    document.getElementById('fietsZoekInput').value = '';
+    document.getElementById('fietsStatusFilter').value = '';
+    alleFietsen = [];
+    loadFietsen();
+}
+
+function toonFietsenLijst(data, footerText) {
     const lijst = document.getElementById('fietsenLijst');
     if (!lijst) return;
     
-    try {
-        if (!window.supabaseClient) {
-            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
-            return;
-        }
+    if (!data || data.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen fietsen gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Serienummer</th>
+                        <th>Model</th>
+                        <th>Kleur</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">QR-code</th>
+                        <th style="text-align:center;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.forEach(fiets => {
+        const statusClass = fiets.status === 'beschikbaar' ? 'badge-available' :
+                           fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
+        const modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
         
-        const { data, error } = await window.supabaseClient
+        html += `
+            <tr id="fiets-${fiets.id}">
+                <td><strong id="fiets-serie-${fiets.id}">${fiets.serienummer}</strong></td>
+                <td>${modelInfo.merk} ${modelInfo.model}</td>
+                <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;"></span> ${modelInfo.kleur}</td>
+                <td><span class="badge ${statusClass}" id="fiets-status-${fiets.id}">${fiets.status}</span></td>
+                <td style="text-align:center;">
+                    <button onclick="window.showQRCode('${fiets.serienummer}')" 
+                            style="background:none;border:none;cursor:pointer;font-size:1.2rem;"
+                            title="Klik om QR-code te bekijken">
+                        📱
+                    </button>
+                </td>
+                <td style="text-align:center;">
+                    <button class="btn btn-sm btn-primary" onclick="window.editFiets('${fiets.id}')" style="margin-right:5px;">
+                        ✏️ Bewerken
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="window.deleteFiets('${fiets.id}')">
+                        🗑️ Verwijderen
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+            ${footerText || `Totaal: ${data.length} fietsen`}
+        </p>
+    `;
+    
+    lijst.innerHTML = html;
+}
+
+// ============================================
+// FIETS BEWERKEN
+// ============================================
+
+function editFiets(fietsId) {
+    console.log('✏️ Bewerken van fiets:', fietsId);
+    
+    const row = document.getElementById(`fiets-${fietsId}`);
+    if (!row) {
+        showMessage('Fiets niet gevonden!');
+        return;
+    }
+    
+    const serieCell = document.getElementById(`fiets-serie-${fietsId}`);
+    const huidigSerienummer = serieCell ? serieCell.textContent.trim() : '';
+    
+    const statusCell = document.getElementById(`fiets-status-${fietsId}`);
+    const huidigeStatus = statusCell ? statusCell.textContent.trim() : 'beschikbaar';
+    
+    if (serieCell) {
+        serieCell.innerHTML = `
+            <input type="text" id="edit-serie-${fietsId}" value="${huidigSerienummer}" 
+                   class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;" required>
+        `;
+    }
+    
+    if (statusCell) {
+        statusCell.innerHTML = `
+            <select id="edit-status-${fietsId}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+                <option value="beschikbaar" ${huidigeStatus === 'beschikbaar' ? 'selected' : ''}>Beschikbaar</option>
+                <option value="verhuurd" ${huidigeStatus === 'verhuurd' ? 'selected' : ''}>Verhuurd</option>
+                <option value="in-onderhoud" ${huidigeStatus === 'in-onderhoud' ? 'selected' : ''}>In onderhoud</option>
+            </select>
+        `;
+    }
+    
+    const actieCell = row.querySelector('td:last-child');
+    if (actieCell) {
+        actieCell.innerHTML = `
+            <button class="btn btn-sm btn-success" onclick="window.saveFiets('${fietsId}')" style="margin-right:5px;">
+                💾 Opslaan
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="window.loadFietsen()">
+                ❌ Annuleren
+            </button>
+        `;
+    }
+}
+
+// ============================================
+// FIETS OPSLAAN (na bewerken)
+// ============================================
+
+async function saveFiets(fietsId) {
+    console.log('💾 Opslaan van fiets:', fietsId);
+    
+    const serieInput = document.getElementById(`edit-serie-${fietsId}`);
+    const statusSelect = document.getElementById(`edit-status-${fietsId}`);
+    
+    if (!serieInput || !statusSelect) {
+        showMessage('Fout: kan velden niet vinden.');
+        return;
+    }
+    
+    const serienummer = serieInput.value.trim();
+    const status = statusSelect.value;
+    
+    if (!serienummer) {
+        showMessage('❌ Serienummer is verplicht!');
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
             .from('individuele_fietsen')
-            .select(`*, fiets_modellen (merk, model, kleur)`)
-            .order('aangemaakt_op', { ascending: false });
+            .update({ serienummer, status })
+            .eq('id', fietsId);
         
         if (error) throw error;
         
-        if (!data || data.length === 0) {
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
-                    <h3>Geen fietsen gevonden</h3>
-                    <p style="color: #999;">Voeg je eerste fiets toe met de knop hierboven.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = `
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Serienummer</th>
-                            <th>Model</th>
-                            <th>Kleur</th>
-                            <th>Status</th>
-                            <th style="text-align:center;">QR-code</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        data.forEach(fiets => {
-            const statusClass = fiets.status === 'beschikbaar' ? 'badge-available' :
-                               fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
-            const modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
-            
-            html += `
-                <tr>
-                    <td><strong>${fiets.serienummer}</strong></td>
-                    <td>${modelInfo.merk} ${modelInfo.model}</td>
-                    <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;"></span> ${modelInfo.kleur}</td>
-                    <td><span class="badge ${statusClass}">${fiets.status}</span></td>
-                    <td style="text-align:center;">
-                        <button onclick="window.showQRCode('${fiets.serienummer}')" 
-                                style="background:none;border:none;cursor:pointer;font-size:1.2rem;"
-                                title="Klik om QR-code te bekijken">
-                            📱
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
-                Totaal: ${data.length} fietsen
-            </p>
-        `;
-        
-        lijst.innerHTML = html;
+        showMessage('✅ Fiets succesvol bijgewerkt!');
+        loadFietsen();
+        loadStats();
         
     } catch (error) {
-        console.error('❌ Fout:', error);
-        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+        console.error('❌ Fout bij opslaan:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// FIETS VERWIJDEREN
+// ============================================
+
+async function deleteFiets(fietsId) {
+    console.log('🗑️ Verwijderen van fiets:', fietsId);
+    
+    if (!confirm('Weet je zeker dat je deze fiets wilt verwijderen?\n\nLet op: Als er verhuur aan deze fiets is gekoppeld, kan dit niet!')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .delete()
+            .eq('id', fietsId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Fiets succesvol verwijderd!');
+        loadFietsen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        
+        if (error.message && error.message.includes('foreign key')) {
+            showMessage('❌ Deze fiets kan niet worden verwijderd omdat er nog verhuur aan is gekoppeld.');
+        } else {
+            showMessage('❌ Fout: ' + error.message);
+        }
     }
 }
 
@@ -879,8 +1076,113 @@ function hideAddKlantForm() {
     }
 }
 
+// ============================================
+// KLANTEN ZOEKEN
+// ============================================
+
+let alleKlanten = [];
+
+async function filterKlanten() {
+    const zoekTerm = document.getElementById('klantZoekInput').value.toLowerCase().trim();
+    
+    if (alleKlanten.length === 0) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('klanten')
+                .select('*')
+                .order('naam', { ascending: true });
+            
+            if (error) throw error;
+            alleKlanten = data || [];
+        } catch (error) {
+            console.error('❌ Fout bij laden:', error);
+            return;
+        }
+    }
+    
+    let gefilterd = alleKlanten;
+    
+    if (zoekTerm) {
+        gefilterd = gefilterd.filter(klant => {
+            const zoekString = `${klant.naam} ${klant.email || ''} ${klant.telefoon || ''} ${klant.adres || ''}`.toLowerCase();
+            return zoekString.includes(zoekTerm);
+        });
+    }
+    
+    toonKlantenLijst(gefilterd, `Totaal: ${gefilterd.length} klanten (gefilterd)`);
+}
+
+function resetKlantFilter() {
+    document.getElementById('klantZoekInput').value = '';
+    alleKlanten = [];
+    loadKlanten();
+}
+
+function toonKlantenLijst(data, footerText) {
+    const lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    if (!data || data.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen klanten gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>E-mail</th>
+                        <th>Telefoon</th>
+                        <th>Adres</th>
+                        <th style="text-align:center;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.forEach(klant => {
+        html += `
+            <tr id="klant-${klant.id}">
+                <td><strong>${klant.naam}</strong></td>
+                <td>${klant.email || '-'}</td>
+                <td>${klant.telefoon || '-'}</td>
+                <td>${klant.adres || '-'}</td>
+                <td style="text-align:center;">
+                    <button class="btn btn-sm btn-primary" onclick="window.editKlant('${klant.id}')" style="margin-right:5px;">
+                        ✏️ Bewerken
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="window.deleteKlant('${klant.id}')">
+                        🗑️ Verwijderen
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+            ${footerText || `Totaal: ${data.length} klanten`}
+        </p>
+    `;
+    
+    lijst.innerHTML = html;
+}
+
 async function loadKlanten() {
     console.log('📥 Laden van klanten...');
+    alleKlanten = [];
+    
     const lijst = document.getElementById('klantenLijst');
     if (!lijst) return;
     
@@ -908,50 +1210,7 @@ async function loadKlanten() {
             return;
         }
         
-        let html = `
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>E-mail</th>
-                            <th>Telefoon</th>
-                            <th>Adres</th>
-                            <th style="text-align:center;">Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        data.forEach(klant => {
-            html += `
-                <tr id="klant-${klant.id}">
-                    <td><strong>${klant.naam}</strong></td>
-                    <td>${klant.email || '-'}</td>
-                    <td>${klant.telefoon || '-'}</td>
-                    <td>${klant.adres || '-'}</td>
-                    <td style="text-align:center;">
-                        <button class="btn btn-sm btn-primary" onclick="window.editKlant('${klant.id}')" style="margin-right:5px;">
-                            ✏️ Bewerken
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="window.deleteKlant('${klant.id}')">
-                            🗑️ Verwijderen
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
-                Totaal: ${data.length} klanten
-            </p>
-        `;
-        
-        lijst.innerHTML = html;
+        toonKlantenLijst(data);
     } catch (error) {
         console.error('❌ Fout bij laden klanten:', error);
         lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
@@ -1163,8 +1422,200 @@ function hideAddVerhuurForm() {
     }
 }
 
+// ============================================
+// VERHUUR ZOEKEN & FILTEREN
+// ============================================
+
+let alleVerhuur = [];
+
+async function filterVerhuur() {
+    const zoekTerm = document.getElementById('verhuurZoekInput').value.toLowerCase().trim();
+    const statusFilter = document.getElementById('verhuurStatusFilter').value;
+    
+    if (alleVerhuur.length === 0) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('verhuur_historiek')
+                .select(`
+                    *,
+                    individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                    klanten (naam, email, telefoon)
+                `)
+                .order('start_datum', { ascending: false });
+            
+            if (error) throw error;
+            alleVerhuur = data || [];
+        } catch (error) {
+            console.error('❌ Fout bij laden:', error);
+            return;
+        }
+    }
+    
+    let gefilterd = alleVerhuur;
+    
+    if (zoekTerm) {
+        gefilterd = gefilterd.filter(verhuur => {
+            const fietsInfo = verhuur.individuele_fietsen || { serienummer: '' };
+            const modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '' };
+            const klantInfo = verhuur.klanten || { naam: '' };
+            const zoekString = `${fietsInfo.serienummer} ${modelInfo.merk} ${modelInfo.model} ${klantInfo.naam}`.toLowerCase();
+            return zoekString.includes(zoekTerm);
+        });
+    }
+    
+    if (statusFilter === 'actief') {
+        gefilterd = gefilterd.filter(v => !v.eind_datum);
+    } else if (statusFilter === 'afgerond') {
+        gefilterd = gefilterd.filter(v => v.eind_datum);
+    }
+    
+    toonVerhuurLijst(gefilterd, `Totaal: ${gefilterd.length} verhuurregels (gefilterd)`);
+}
+
+function resetVerhuurFilter() {
+    document.getElementById('verhuurZoekInput').value = '';
+    document.getElementById('verhuurStatusFilter').value = '';
+    alleVerhuur = [];
+    loadVerhuur();
+}
+
+function toonVerhuurLijst(data, footerText) {
+    const lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    if (!data || data.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen verhuur gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fiets</th>
+                        <th>Klant</th>
+                        <th>Start</th>
+                        <th>Eind</th>
+                        <th>Dagen in bezit</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.forEach(verhuur => {
+        const fietsInfo = verhuur.individuele_fietsen || { serienummer: 'Onbekend', fiets_modellen: { merk: '', model: '', kleur: '' } };
+        const modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '', kleur: '' };
+        const klantInfo = verhuur.klanten || { naam: 'Onbekend' };
+        
+        const isActief = !verhuur.eind_datum;
+        const statusClass = isActief ? 'badge-rented' : 'badge-available';
+        const statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+        
+        const startDatum = new Date(verhuur.start_datum);
+        const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
+        
+        const tijdVerschil = eindDatum - startDatum;
+        const dagenInBezit = Math.floor(tijdVerschil / (1000 * 60 * 60 * 24));
+        
+        const startDatumStr = startDatum.toLocaleDateString('nl-BE');
+        const eindDatumStr = verhuur.eind_datum ? eindDatum.toLocaleDateString('nl-BE') : '-';
+        
+        let dagenKleur = '#28a745';
+        if (dagenInBezit > 30 && dagenInBezit <= 90) {
+            dagenKleur = '#ffc107';
+        } else if (dagenInBezit > 90) {
+            dagenKleur = '#dc3545';
+        }
+        
+        html += `
+            <tr id="verhuur-${verhuur.id}">
+                <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
+                <td><strong>${klantInfo.naam}</strong></td>
+                <td>${startDatumStr}</td>
+                <td>${eindDatumStr}</td>
+                <td style="font-weight:600;color:${dagenKleur};">
+                    ${dagenInBezit} ${dagenInBezit === 1 ? 'dag' : 'dagen'}
+                    ${isActief ? '⏳' : ''}
+                </td>
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                <td style="text-align:center;">
+                    ${isActief ? `
+                        <button class="btn btn-sm btn-success" onclick="window.beëindigVerhuur('${verhuur.id}')" style="margin-right:5px;">
+                            ✅ Beëindigen
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-danger" onclick="window.deleteVerhuur('${verhuur.id}')">
+                        🗑️ Verwijderen
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+            ${footerText || `Totaal: ${data.length} verhuurregels`}
+        </p>
+    `;
+    
+    lijst.innerHTML = html;
+}
+
+async function loadVerhuur() {
+    console.log('📥 Laden van verhuur...');
+    alleVerhuur = [];
+    
+    const lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select(`
+                *,
+                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                klanten (naam, email, telefoon)
+            `)
+            .order('start_datum', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+                    <h3>Geen verhuur gevonden</h3>
+                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonVerhuurLijst(data);
+    } catch (error) {
+        console.error('❌ Fout bij laden verhuur:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
+
 async function loadVerhuurSelectOptions() {
-    // LAAD ALLEEN BESCHIKBARE FIETSEN (status = 'beschikbaar')
     const fietsSelect = document.getElementById('verhuurFiets');
     const klantSelect = document.getElementById('verhuurKlant');
     
@@ -1173,7 +1624,7 @@ async function loadVerhuurSelectOptions() {
             const { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select(`id, serienummer, fiets_modellen (merk, model, kleur)`)
-                .eq('status', 'beschikbaar')  // ALLEEN beschikbare fietsen
+                .eq('status', 'beschikbaar')
                 .order('serienummer', { ascending: true });
             
             if (!error && data) {
@@ -1214,129 +1665,6 @@ async function loadVerhuurSelectOptions() {
     }
 }
 
-async function loadVerhuur() {
-    console.log('📥 Laden van verhuur...');
-    const lijst = document.getElementById('verhuurLijst');
-    if (!lijst) return;
-    
-    try {
-        if (!window.supabaseClient) {
-            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
-            return;
-        }
-        
-        const { data, error } = await window.supabaseClient
-            .from('verhuur_historiek')
-            .select(`
-                *,
-                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
-                klanten (naam, email, telefoon)
-            `)
-            .order('start_datum', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
-                    <h3>Geen verhuur gevonden</h3>
-                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // ============================================
-        // TABEL MET "DAGEN IN BEZIT" KOLOM
-        // ============================================
-        let html = `
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fiets</th>
-                            <th>Klant</th>
-                            <th>Start</th>
-                            <th>Eind</th>
-                            <th>Dagen in bezit</th>
-                            <th>Status</th>
-                            <th style="text-align:center;">Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        data.forEach(verhuur => {
-            const fietsInfo = verhuur.individuele_fietsen || { serienummer: 'Onbekend', fiets_modellen: { merk: '', model: '', kleur: '' } };
-            const modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '', kleur: '' };
-            const klantInfo = verhuur.klanten || { naam: 'Onbekend' };
-            
-            const isActief = !verhuur.eind_datum;
-            const statusClass = isActief ? 'badge-rented' : 'badge-available';
-            const statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
-            
-            const startDatum = new Date(verhuur.start_datum);
-            const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
-            
-            // ============================================
-            // BEREKEN AANTAL DAGEN
-            // ============================================
-            const tijdVerschil = eindDatum - startDatum;
-            const dagenInBezit = Math.floor(tijdVerschil / (1000 * 60 * 60 * 24));
-            
-            const startDatumStr = startDatum.toLocaleDateString('nl-BE');
-            const eindDatumStr = verhuur.eind_datum ? eindDatum.toLocaleDateString('nl-BE') : '-';
-            
-            // Kleurcode voor dagen
-            let dagenKleur = '#28a745'; // Groen (0-30 dagen)
-            if (dagenInBezit > 30 && dagenInBezit <= 90) {
-                dagenKleur = '#ffc107'; // Geel (31-90 dagen)
-            } else if (dagenInBezit > 90) {
-                dagenKleur = '#dc3545'; // Rood (>90 dagen)
-            }
-            
-            html += `
-                <tr id="verhuur-${verhuur.id}">
-                    <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
-                    <td><strong>${klantInfo.naam}</strong></td>
-                    <td>${startDatumStr}</td>
-                    <td>${eindDatumStr}</td>
-                    <td style="font-weight:600;color:${dagenKleur};">
-                        ${dagenInBezit} ${dagenInBezit === 1 ? 'dag' : 'dagen'}
-                        ${isActief ? '⏳' : ''}
-                    </td>
-                    <td><span class="badge ${statusClass}">${statusText}</span></td>
-                    <td style="text-align:center;">
-                        ${isActief ? `
-                            <button class="btn btn-sm btn-success" onclick="window.beëindigVerhuur('${verhuur.id}')" style="margin-right:5px;">
-                                ✅ Beëindigen
-                            </button>
-                        ` : ''}
-                        <button class="btn btn-sm btn-danger" onclick="window.deleteVerhuur('${verhuur.id}')">
-                            🗑️ Verwijderen
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
-                Totaal: ${data.length} verhuurregels
-            </p>
-        `;
-        
-        lijst.innerHTML = html;
-    } catch (error) {
-        console.error('❌ Fout bij laden verhuur:', error);
-        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
-    }
-}
-
 // ============================================
 // VERHUUR SUBMIT (Toevoegen)
 // ============================================
@@ -1367,7 +1695,6 @@ async function handleVerhuurSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Verhuur wordt gestart...</p>';
     
     try {
-        // 1. Voeg verhuur toe aan historiek
         const { error: verhuurError } = await window.supabaseClient
             .from('verhuur_historiek')
             .insert([{
@@ -1379,7 +1706,6 @@ async function handleVerhuurSubmit(event) {
         
         if (verhuurError) throw verhuurError;
         
-        // 2. Update fiets status naar 'verhuurd'
         const { error: fietsError } = await window.supabaseClient
             .from('individuele_fietsen')
             .update({ status: 'verhuurd' })
@@ -1437,7 +1763,7 @@ async function beëindigVerhuur(verhuurId) {
         if (verhuurData && verhuurData.fiets_id) {
             const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
-                .update({ status: 'beschikbaar' })
+                .update({ status: 'beschikbar' })
                 .eq('id', verhuurData.fiets_id);
             
             if (fietsError) throw fietsError;
@@ -1567,7 +1893,6 @@ function showMessage(message) {
 async function showQRCode(serienummer) {
     console.log('📱 Toon QR-code voor:', serienummer);
     
-    // Haal de fietsgegevens op uit de database
     let fietsGegevens = null;
     try {
         const { data, error } = await window.supabaseClient
@@ -1583,7 +1908,6 @@ async function showQRCode(serienummer) {
         console.warn('⚠️ Kan fietsgegevens niet ophalen:', error);
     }
     
-    // Maak een modal aan als die nog niet bestaat
     let modal = document.getElementById('qrModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -1629,10 +1953,8 @@ async function showQRCode(serienummer) {
                         Scan de QR-code voor fietsinformatie
                     </p>
                     
-                    <!-- QR-code container -->
                     <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 10px 0;"></div>
                     
-                    <!-- Fietsgegevens onder de QR -->
                     <div id="qrFietsInfo" style="margin-top: 10px; padding: 10px; background: #f8f6f3; border-radius: 8px;">
                         <p style="margin: 3px 0; font-weight: 600; color: #1A2B4C;" id="qrModelDisplay">-</p>
                         <p style="margin: 3px 0; color: #666; font-size: 0.9rem;">
@@ -1650,7 +1972,6 @@ async function showQRCode(serienummer) {
         `;
         document.body.appendChild(modal);
         
-        // Sluit modal bij klikken buiten de modal
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
                 window.closeQRModal();
@@ -1658,10 +1979,8 @@ async function showQRCode(serienummer) {
         });
     }
     
-    // Toon de modal
     modal.style.display = 'flex';
     
-    // Genereer de QR-code in de container
     const container = document.getElementById('qrCodeContainer');
     const modelDisplay = document.getElementById('qrModelDisplay');
     const serienummerDisplay = document.getElementById('qrSerienummerDisplay');
@@ -1669,7 +1988,6 @@ async function showQRCode(serienummer) {
     if (container) {
         container.innerHTML = '';
         
-        // Toon fietsgegevens
         if (fietsGegevens && fietsGegevens.fiets_modellen) {
             const model = fietsGegevens.fiets_modellen;
             const kleurStyle = `display:inline-block;width:14px;height:14px;border-radius:50%;background:${model.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;`;
@@ -1683,11 +2001,9 @@ async function showQRCode(serienummer) {
         
         serienummerDisplay.textContent = serienummer;
         
-        // Sla het serienummer op voor download
         window._currentQRSerienummer = serienummer;
         window._currentQRFietsData = fietsGegevens;
         
-        // Genereer QR - ALLEEN het serienummer
         try {
             new QRCode(container, {
                 text: serienummer,
@@ -1720,7 +2036,6 @@ function closeQRModal() {
 function downloadQRCode() {
     console.log('⬇️ Start download van QR-afbeelding...');
     
-    // Haal de QR-code canvas op
     const qrContainer = document.getElementById('qrCodeContainer');
     if (!qrContainer) {
         alert('❌ Geen QR-code gevonden.');
@@ -1733,17 +2048,14 @@ function downloadQRCode() {
         return;
     }
     
-    // Haal de fietsgegevens op
     const modelDisplay = document.getElementById('qrModelDisplay');
     const serienummerDisplay = document.getElementById('qrSerienummerDisplay');
     const modelText = modelDisplay ? modelDisplay.textContent.trim() : 'Panta Club';
     const serienummer = serienummerDisplay ? serienummerDisplay.textContent.trim() : window._currentQRSerienummer || 'Onbekend';
     
-    // Maak een nieuwe canvas voor de volledige afbeelding
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // Bepaal afmetingen
     const padding = 30;
     const qrSize = 200;
     const totalWidth = qrSize + (padding * 2);
@@ -1752,14 +2064,11 @@ function downloadQRCode() {
     canvas.width = totalWidth;
     canvas.height = totalHeight;
     
-    // Witte achtergrond
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, totalWidth, totalHeight);
     
-    // QR-code tekenen
     ctx.drawImage(qrCanvas, padding, padding, qrSize, qrSize);
     
-    // Tekst onder de QR-code
     ctx.fillStyle = '#1A2B4C';
     ctx.font = 'bold 14px Poppins, sans-serif';
     ctx.textAlign = 'center';
@@ -1769,7 +2078,6 @@ function downloadQRCode() {
     ctx.font = '12px Poppins, sans-serif';
     ctx.fillText('Serienummer: ' + serienummer, totalWidth / 2, qrSize + padding + 55);
     
-    // Download de afbeelding
     try {
         const link = document.createElement('a');
         link.download = `PantaClub_QR_${serienummer}.png`;
@@ -1805,7 +2113,14 @@ window.saveModel = saveModel;
 window.cancelEditModel = cancelEditModel;
 window.deleteModel = deleteModel;
 
-// Klanten functies
+// Fietsen
+window.filterFietsen = filterFietsen;
+window.resetFietsFilter = resetFietsFilter;
+window.editFiets = editFiets;
+window.saveFiets = saveFiets;
+window.deleteFiets = deleteFiets;
+
+// Klanten
 window.showAddKlantForm = showAddKlantForm;
 window.hideAddKlantForm = hideAddKlantForm;
 window.loadKlanten = loadKlanten;
@@ -1813,15 +2128,19 @@ window.editKlant = editKlant;
 window.saveKlant = saveKlant;
 window.cancelEditKlant = cancelEditKlant;
 window.deleteKlant = deleteKlant;
+window.filterKlanten = filterKlanten;
+window.resetKlantFilter = resetKlantFilter;
 
-// Verhuur functies
+// Verhuur
 window.showAddVerhuurForm = showAddVerhuurForm;
 window.hideAddVerhuurForm = hideAddVerhuurForm;
 window.loadVerhuur = loadVerhuur;
 window.beëindigVerhuur = beëindigVerhuur;
 window.deleteVerhuur = deleteVerhuur;
+window.filterVerhuur = filterVerhuur;
+window.resetVerhuurFilter = resetVerhuurFilter;
 
-// QR-code functies
+// QR-code
 window.showQRCode = showQRCode;
 window.closeQRModal = closeQRModal;
 window.downloadQRCode = downloadQRCode;
