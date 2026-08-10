@@ -1164,6 +1164,7 @@ function hideAddVerhuurForm() {
 }
 
 async function loadVerhuurSelectOptions() {
+    // LAAD ALLEEN BESCHIKBARE FIETSEN (status = 'beschikbaar')
     const fietsSelect = document.getElementById('verhuurFiets');
     const klantSelect = document.getElementById('verhuurKlant');
     
@@ -1172,7 +1173,7 @@ async function loadVerhuurSelectOptions() {
             const { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select(`id, serienummer, fiets_modellen (merk, model, kleur)`)
-                .in('status', ['beschikbaar', 'verhuurd'])
+                .eq('status', 'beschikbaar')  // ALLEEN beschikbare fietsen
                 .order('serienummer', { ascending: true });
             
             if (!error && data) {
@@ -1341,6 +1342,7 @@ async function handleVerhuurSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Verhuur wordt gestart...</p>';
     
     try {
+        // 1. Voeg verhuur toe aan historiek
         const { error: verhuurError } = await window.supabaseClient
             .from('verhuur_historiek')
             .insert([{
@@ -1352,6 +1354,7 @@ async function handleVerhuurSubmit(event) {
         
         if (verhuurError) throw verhuurError;
         
+        // 2. Update fiets status naar 'verhuurd'
         const { error: fietsError } = await window.supabaseClient
             .from('individuele_fietsen')
             .update({ status: 'verhuurd' })
@@ -1369,6 +1372,7 @@ async function handleVerhuurSubmit(event) {
             loadStats();
         }, 2000);
     } catch (error) {
+        console.error('❌ Fout:', error);
         messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
     } finally {
         button.textContent = originalText;

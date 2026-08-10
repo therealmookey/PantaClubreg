@@ -42,8 +42,8 @@ function renderNavigation() {
                         <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
                         <li><a href="#" data-page="modellen">📦 Modellen</a></li>
                         <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
-						<li><a href="#" data-page="verhuur">📋 Verhuur</a></li>
                         <li><a href="#" data-page="klanten">👤 Klanten</a></li>
+						<li><a href="#" data-page="verhuur">📋 Verhuur</a></li>
                         <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
                         <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
                     ` : `
