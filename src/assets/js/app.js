@@ -1380,6 +1380,9 @@ async function importFietsExcelData() {
     const statusDiv = document.getElementById('fietsExcelImportStatus');
     const importBtn = document.getElementById('fietsExcelImportBtn');
     
+    // Toon welke kolommen er zijn gevonden
+    console.log('📋 Gevonden kolommen:', fietsExcelHeaders);
+    
     if (!confirm(`Weet je zeker dat je ${fietsExcelData.length} fietsen wilt importeren?`)) {
         return;
     }
@@ -1418,8 +1421,15 @@ async function importFietsExcelData() {
         for (let i = 0; i < fietsExcelData.length; i++) {
             const row = fietsExcelData[i];
             
-            // 1. SERIENUMMER
-            const serienummer = String(row.Serienummer || '').trim();
+            // ============================================
+            // 1. SERIENUMMER - Zoek in meerdere mogelijke kolommen
+            // ============================================
+            const serienummer = findValue(row, [
+                'Serienummer', 'serienummer', 'SERIENUMMER',
+                'Serie nummer', 'serie nummer',
+                'Nummer', 'nummer', 'NR', 'Nr'
+            ]);
+            
             if (!serienummer) {
                 errorCount++;
                 errors.push(`Rij ${i + 1}: Geen serienummer gevonden`);
@@ -1432,60 +1442,104 @@ async function importFietsExcelData() {
                 continue;
             }
             
-            // 2. MODEL (Type + Kleur)
-            const type = String(row.Type || '').trim();
-            const kleur = String(row.Kleur || '').trim();
-            const merk = 'WOOM';
+            // ============================================
+            // 2. TYPE/MODEL - Zoek in meerdere mogelijke kolommen
+            // ============================================
+            const type = findValue(row, [
+                'Type', 'type', 'TYPE',
+                'Model', 'model', 'MODEL',
+                'Fiets type', 'fiets type',
+                'Product', 'product', 'PRODUCT'
+            ]);
             
+            // 3. KLEUR - Zoek in meerdere mogelijke kolommen
+            const kleur = findValue(row, [
+                'Kleur', 'kleur', 'KLEUR',
+                'Color', 'color', 'COLOR',
+                'Kleur (nl)', 'kleur (nl)'
+            ]);
+            
+            // 4. MERK - Zoek in meerdere mogelijke kolommen (met fallback)
+            let merk = findValue(row, [
+                'Merk', 'merk', 'MERK',
+                'Brand', 'brand', 'BRAND'
+            ]);
+            
+            // Als geen merk gevonden, gebruik 'WOOM' als default
+            if (!merk) {
+                // Probeer merk uit type te halen (bijv. "WOOM 2" -> "WOOM")
+                if (type) {
+                    const typeParts = type.split(' ');
+                    if (typeParts.length > 0 && typeParts[0].length > 0) {
+                        merk = typeParts[0];
+                    } else {
+                        merk = 'WOOM';
+                    }
+                } else {
+                    merk = 'WOOM';
+                }
+            }
+            
+            // ============================================
+            // 5. MODEL ID - Zoek of maak model aan
+            // ============================================
             let modelId = null;
             let modelMatch = null;
             
             if (type) {
+                // Zoek exacte match op merk + model + kleur
                 modelMatch = bestaandeModellen.find(m => 
-                    m.model === type && 
-                    m.kleur === kleur &&
-                    m.merk === merk
+                    m.merk.toLowerCase() === merk.toLowerCase() && 
+                    m.model.toLowerCase() === type.toLowerCase() && 
+                    (kleur ? m.kleur.toLowerCase() === kleur.toLowerCase() : true)
                 );
             }
             
             if (modelMatch) {
                 modelId = modelMatch.id;
-                matchedModels.push(`${merk} - ${type} (${kleur})`);
+                matchedModels.push(`${merk} - ${type} (${kleur || 'Onbekend'})`);
             } else if (type) {
+                // Geen match gevonden, maak nieuw model aan
+                const modelKleur = kleur || 'Onbekend';
                 const { data: newModel, error: newModelError } = await window.supabaseClient
                     .from('fiets_modellen')
                     .insert([{ 
                         merk: merk, 
                         model: type, 
-                        kleur: kleur || 'Onbekend' 
+                        kleur: modelKleur
                     }])
                     .select();
                 
                 if (newModelError) {
                     errorCount++;
                     errors.push(`Rij ${i + 1}: Fout bij aanmaken model: ${newModelError.message}`);
+                    console.error('❌ Fout bij aanmaken model:', newModelError);
                     continue;
                 }
                 modelId = newModel[0].id;
-                newModels.push(`${merk} - ${type} (${kleur || 'Onbekend'})`);
+                newModels.push(`${merk} - ${type} (${modelKleur})`);
             } else {
                 errorCount++;
-                errors.push(`Rij ${i + 1}: Geen type (model) gevonden`);
+                errors.push(`Rij ${i + 1}: Geen type/model gevonden`);
                 continue;
             }
             
-            // 3. STATUS
-            const statusRaw = String(row.Status || '').trim().toLowerCase();
+            // ============================================
+            // 6. STATUS
+            // ============================================
+            const statusRaw = String(findValue(row, ['Status', 'status', 'STATUS', 'Conditie', 'conditie']) || '').toLowerCase();
             let fietsStatus = 'beschikbaar';
             if (statusRaw.includes('verhuurd') || statusRaw.includes('huur')) {
                 fietsStatus = 'verhuurd';
-            } else if (statusRaw.includes('onderhoud') || statusRaw.includes('reparatie')) {
+            } else if (statusRaw.includes('onderhoud') || statusRaw.includes('reparatie') || statusRaw.includes('kapot')) {
                 fietsStatus = 'in-onderhoud';
             }
             
-            // 4. KLANT KOPPELING
+            // ============================================
+            // 7. KLANT KOPPELING
+            // ============================================
             let klantId = null;
-            const klantNaam = String(row.Klant || '').trim();
+            const klantNaam = findValue(row, ['Klant', 'klant', 'KLANT', 'Klantnaam', 'klantnaam']);
             if (klantNaam) {
                 const klantMatch = alleKlanten.find(k => 
                     k.naam.toLowerCase().includes(klantNaam.toLowerCase()) ||
@@ -1496,25 +1550,32 @@ async function importFietsExcelData() {
                 }
             }
             
-            // 5. NOTITIES
-            let notities = String(row.Notities || '').trim();
-            const oorsprongSerie = String(row['Oorsprong Serienr.'] || '').trim();
+            // ============================================
+            // 8. NOTITIES
+            // ============================================
+            let notities = findValue(row, ['Notities', 'notities', 'NOTITIES', 'Opmerkingen', 'opmerkingen']) || '';
+            const oorsprongSerie = findValue(row, ['Oorsprong Serienr.', 'Oorsprong Serienummer', 'oorsprong serienr.']);
             if (oorsprongSerie) {
                 notities = notities ? `${notities} | Oorsprong: ${oorsprongSerie}` : `Oorsprong: ${oorsprongSerie}`;
             }
             
-            // 6. AANKOOP DATUM
+            // ============================================
+            // 9. AANKOOP DATUM
+            // ============================================
             let aankoopDatum = null;
-            if (row['Aangekocht']) {
+            const aankoopDatumRaw = findValue(row, ['Aangekocht', 'aangekocht', 'Aankoopdatum', 'aankoopdatum', 'Datum', 'datum']);
+            if (aankoopDatumRaw) {
                 try {
-                    const datum = new Date(row['Aangekocht']);
+                    const datum = new Date(aankoopDatumRaw);
                     if (!isNaN(datum)) {
                         aankoopDatum = datum.toISOString().split('T')[0];
                     }
                 } catch (e) {}
             }
             
-            // 7. FIETS OPSLAAN
+            // ============================================
+            // 10. FIETS OPSLAAN
+            // ============================================
             const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .insert([{
@@ -1537,6 +1598,9 @@ async function importFietsExcelData() {
             }
         }
         
+        // ============================================
+        // RESULTAAT TONEN
+        // ============================================
         let resultMessage = `✅ ${successCount} fietsen succesvol geïmporteerd.`;
         if (newModels.length > 0) {
             resultMessage += `\n📦 Nieuwe modellen aangemaakt: ${newModels.length}`;
