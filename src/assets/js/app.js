@@ -1,6 +1,6 @@
 /**
  * ============================================
- * HOOFDAPPLICATIE - MET MODELLEN EN FIETSEN
+ * HOOFDAPPLICATIE - MET MODELLEN, FIETSEN EN KLANTEN
  * ============================================
  */
 
@@ -74,6 +74,11 @@ const PAGES = {
                     <p style="color: #666; margin: 0;">Individuele fietsen</p>
                 </div>
                 <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;">👤</div>
+                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-klanten">0</h3>
+                    <p style="color: #666; margin: 0;">Klanten</p>
+                </div>
+                <div class="card" style="text-align: center;">
                     <div style="font-size: 2.5rem; margin-bottom: 8px;">🔧</div>
                     <h3 style="font-size: 1.8rem; margin: 0;" id="stat-onderhoud">0</h3>
                     <p style="color: #666; margin: 0;">Openstaand onderhoud</p>
@@ -89,7 +94,7 @@ const PAGES = {
                     <button class="btn btn-accent" onclick="window.navigateTo('fietsen')">
                         🚲 Fiets toevoegen
                     </button>
-                    <button class="btn btn-outline" onclick="window.showMessage('Klanten pagina komt binnenkort!')">
+                    <button class="btn btn-primary" onclick="window.navigateTo('klanten')">
                         👤 Klant toevoegen
                     </button>
                 </div>
@@ -199,11 +204,48 @@ const PAGES = {
     klanten: `
         <div style="padding: 20px 0;">
             <h1>👤 Klanten</h1>
-            <p style="color: #666; margin-bottom: 20px;">Beheer hier alle klanten. (Komt binnenkort)</p>
-            <div class="card" style="text-align: center; padding: 40px;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
-                <h3>Klantenbeheer komt binnenkort</h3>
-                <p style="color: #999;">Handmatig toevoegen en Excel import.</p>
+            <p style="color: #666; margin-bottom: 20px;">
+                Beheer hier alle klanten. Je kunt ze handmatig toevoegen, bewerken of verwijderen.
+            </p>
+            
+            <button class="btn btn-primary" onclick="window.showAddKlantForm()" style="margin-bottom: 20px;">
+                ➕ Nieuwe klant toevoegen
+            </button>
+            
+            <div id="addKlantForm" style="display: none; margin-bottom: 30px;">
+                <div class="card">
+                    <h3>Nieuwe klant toevoegen</h3>
+                    <form id="klantForm">
+                        <div class="form-group">
+                            <label for="klantNaam">Volledige naam *</label>
+                            <input type="text" id="klantNaam" placeholder="Bijv. Jan Janssens" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="klantEmail">E-mailadres</label>
+                            <input type="email" id="klantEmail" placeholder="jan@voorbeeld.be">
+                        </div>
+                        <div class="form-group">
+                            <label for="klantTelefoon">Telefoonnummer</label>
+                            <input type="text" id="klantTelefoon" placeholder="0485 12 34 56">
+                        </div>
+                        <div class="form-group">
+                            <label for="klantAdres">Adres</label>
+                            <input type="text" id="klantAdres" placeholder="Straat 1, 1000 Brussel">
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="submit" class="btn btn-primary">💾 Opslaan</button>
+                            <button type="button" class="btn btn-outline" onclick="window.hideAddKlantForm()">Annuleren</button>
+                        </div>
+                    </form>
+                    <div id="klantFormMessage" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+            
+            <div id="klantenLijst">
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
+                    <h3>Laden van klanten...</h3>
+                </div>
             </div>
         </div>
     `,
@@ -247,6 +289,9 @@ function navigateTo(page) {
     }
     if (page === 'fietsen') {
         setTimeout(loadFietsen, 100);
+    }
+    if (page === 'klanten') {
+        setTimeout(loadKlanten, 100);
     }
     if (page === 'dashboard') {
         setTimeout(loadStats, 100);
@@ -742,6 +787,289 @@ async function handleFietsSubmit(event) {
 }
 
 // ============================================
+// KLANTEN FUNCTIES
+// ============================================
+
+function showAddKlantForm() {
+    const form = document.getElementById('addKlantForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function hideAddKlantForm() {
+    const form = document.getElementById('addKlantForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+    const message = document.getElementById('klantFormMessage');
+    if (message) {
+        message.innerHTML = '';
+    }
+    const formElement = document.getElementById('klantForm');
+    if (formElement) {
+        formElement.reset();
+    }
+}
+
+async function loadKlanten() {
+    console.log('📥 Laden van klanten...');
+    const lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('klanten')
+            .select('*')
+            .order('naam', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
+                    <h3>Geen klanten gevonden</h3>
+                    <p style="color: #999;">Voeg je eerste klant toe met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>E-mail</th>
+                            <th>Telefoon</th>
+                            <th>Adres</th>
+                            <th style="text-align:center;">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach(klant => {
+            html += `
+                <tr id="klant-${klant.id}">
+                    <td><strong>${klant.naam}</strong></td>
+                    <td>${klant.email || '-'}</td>
+                    <td>${klant.telefoon || '-'}</td>
+                    <td>${klant.adres || '-'}</td>
+                    <td style="text-align:center;">
+                        <button class="btn btn-sm btn-primary" onclick="window.editKlant('${klant.id}')" style="margin-right:5px;">
+                            ✏️ Bewerken
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="window.deleteKlant('${klant.id}')">
+                            🗑️ Verwijderen
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+                Totaal: ${data.length} klanten
+            </p>
+        `;
+        
+        lijst.innerHTML = html;
+    } catch (error) {
+        console.error('❌ Fout bij laden klanten:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
+
+// ============================================
+// KLANT BEWERKEN
+// ============================================
+
+function editKlant(klantId) {
+    console.log('✏️ Bewerken van klant:', klantId);
+    
+    const row = document.getElementById(`klant-${klantId}`);
+    if (!row) {
+        showMessage('Klant niet gevonden!');
+        return;
+    }
+    
+    const cells = row.querySelectorAll('td');
+    const naam = cells[0].textContent.trim();
+    const email = cells[1].textContent.trim() === '-' ? '' : cells[1].textContent.trim();
+    const telefoon = cells[2].textContent.trim() === '-' ? '' : cells[2].textContent.trim();
+    const adres = cells[3].textContent.trim() === '-' ? '' : cells[3].textContent.trim();
+    
+    row.innerHTML = `
+        <td>
+            <input type="text" id="edit-naam-${klantId}" value="${naam}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;" required>
+        </td>
+        <td>
+            <input type="email" id="edit-email-${klantId}" value="${email}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-telefoon-${klantId}" value="${telefoon}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-adres-${klantId}" value="${adres}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td style="text-align:center;">
+            <button class="btn btn-sm btn-success" onclick="window.saveKlant('${klantId}')" style="margin-right:5px;">
+                💾 Opslaan
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="window.cancelEditKlant('${klantId}')">
+                ❌ Annuleren
+            </button>
+        </td>
+    `;
+}
+
+// ============================================
+// KLANT OPSLAAN
+// ============================================
+
+async function saveKlant(klantId) {
+    console.log('💾 Opslaan van klant:', klantId);
+    
+    const naamInput = document.getElementById(`edit-naam-${klantId}`);
+    const emailInput = document.getElementById(`edit-email-${klantId}`);
+    const telefoonInput = document.getElementById(`edit-telefoon-${klantId}`);
+    const adresInput = document.getElementById(`edit-adres-${klantId}`);
+    
+    if (!naamInput) {
+        showMessage('Fout: kan velden niet vinden.');
+        return;
+    }
+    
+    const naam = naamInput.value.trim();
+    const email = emailInput.value.trim();
+    const telefoon = telefoonInput.value.trim();
+    const adres = adresInput.value.trim();
+    
+    if (!naam) {
+        showMessage('❌ Naam is verplicht!');
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .update({ naam, email, telefoon, adres })
+            .eq('id', klantId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Klant succesvol bijgewerkt!');
+        loadKlanten();
+        
+    } catch (error) {
+        console.error('❌ Fout bij opslaan:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// KLANT BEWERKING ANNULEREN
+// ============================================
+
+function cancelEditKlant(klantId) {
+    console.log('❌ Bewerking geannuleerd voor:', klantId);
+    loadKlanten();
+}
+
+// ============================================
+// KLANT VERWIJDEREN
+// ============================================
+
+async function deleteKlant(klantId) {
+    console.log('🗑️ Verwijderen van klant:', klantId);
+    
+    if (!confirm('Weet je zeker dat je deze klant wilt verwijderen?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .delete()
+            .eq('id', klantId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Klant succesvol verwijderd!');
+        loadKlanten();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// KLANT SUBMIT (Toevoegen)
+// ============================================
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'klantForm') {
+        event.preventDefault();
+        await handleKlantSubmit(event);
+    }
+});
+
+async function handleKlantSubmit(event) {
+    const naam = document.getElementById('klantNaam').value.trim();
+    const email = document.getElementById('klantEmail').value.trim();
+    const telefoon = document.getElementById('klantTelefoon').value.trim();
+    const adres = document.getElementById('klantAdres').value.trim();
+    const messageDiv = document.getElementById('klantFormMessage');
+    const button = event.target.querySelector('button[type="submit"]');
+    const originalText = button.textContent;
+    
+    if (!naam) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Naam is verplicht!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .insert([{ naam, email, telefoon, adres }]);
+        
+        if (error) throw error;
+        
+        messageDiv.innerHTML = `<p style="color: #28a745;">✅ Klant ${naam} succesvol toegevoegd!</p>`;
+        document.getElementById('klantForm').reset();
+        
+        setTimeout(() => {
+            hideAddKlantForm();
+            loadKlanten();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
 // STATISTIEKEN
 // ============================================
 
@@ -757,10 +1085,16 @@ async function loadStats() {
             .from('individuele_fietsen')
             .select('*', { count: 'exact', head: true });
         
+        const { count: klantenCount } = await window.supabaseClient
+            .from('klanten')
+            .select('*', { count: 'exact', head: true });
+        
         const el1 = document.getElementById('stat-modellen');
         const el2 = document.getElementById('stat-fietsen');
+        const el3 = document.getElementById('stat-klanten');
         if (el1) el1.textContent = modellenCount || 0;
         if (el2) el2.textContent = fietsenCount || 0;
+        if (el3) el3.textContent = klantenCount || 0;
     } catch (error) {
         console.error('❌ Fout bij laden statistieken:', error);
     }
@@ -945,57 +1279,71 @@ function closeQRModal() {
  * Downloadt de QR-code als afbeelding met fietsgegevens
  */
 function downloadQRCode() {
-    const container = document.getElementById('qrExportContainer');
-    if (!container) {
-        alert('❌ Geen QR-code om te downloaden.');
+    console.log('⬇️ Start download van QR-afbeelding...');
+    
+    // Haal de QR-code canvas op
+    const qrContainer = document.getElementById('qrCodeContainer');
+    if (!qrContainer) {
+        alert('❌ Geen QR-code gevonden.');
         return;
     }
     
-    // Toon een laadmelding
-    const button = document.querySelector('#qrModal .btn-primary');
-    const originalText = button ? button.textContent : 'Downloaden...';
-    if (button) {
-        button.textContent = '⏳ Bezig...';
-        button.disabled = true;
+    const qrCanvas = qrContainer.querySelector('canvas');
+    if (!qrCanvas) {
+        alert('❌ Geen QR-code afbeelding gevonden.');
+        return;
     }
     
+    // Haal de fietsgegevens op
+    const modelDisplay = document.getElementById('qrModelDisplay');
+    const serienummerDisplay = document.getElementById('qrSerienummerDisplay');
+    const modelText = modelDisplay ? modelDisplay.textContent.trim() : 'Panta Club';
+    const serienummer = serienummerDisplay ? serienummerDisplay.textContent.trim() : window._currentQRSerienummer || 'Onbekend';
+    
+    // Maak een nieuwe canvas voor de volledige afbeelding
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Bepaal afmetingen
+    const padding = 30;
+    const qrSize = 200;
+    const totalWidth = qrSize + (padding * 2);
+    const totalHeight = qrSize + (padding * 2) + 70;
+    
+    canvas.width = totalWidth;
+    canvas.height = totalHeight;
+    
+    // Witte achtergrond
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, totalWidth, totalHeight);
+    
+    // QR-code tekenen
+    ctx.drawImage(qrCanvas, padding, padding, qrSize, qrSize);
+    
+    // Tekst onder de QR-code
+    ctx.fillStyle = '#1A2B4C';
+    ctx.font = 'bold 14px Poppins, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(modelText, totalWidth / 2, qrSize + padding + 30);
+    
+    ctx.fillStyle = '#666666';
+    ctx.font = '12px Poppins, sans-serif';
+    ctx.fillText('Serienummer: ' + serienummer, totalWidth / 2, qrSize + padding + 55);
+    
+    // Download de afbeelding
     try {
-        // Gebruik html2canvas om de container om te zetten naar een afbeelding
-        html2canvas(container, {
-            scale: 2,  // Hogere kwaliteit
-            backgroundColor: '#ffffff',
-            allowTaint: true,
-            useCORS: true,
-            logging: false
-        }).then(canvas => {
-            // Maak een downloadlink
-            const link = document.createElement('a');
-            link.download = `PantaClub_QR_${window._currentQRSerienummer || 'fiets'}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            
-            console.log('✅ QR-afbeelding gedownload');
-            
-            // Herstel de knop
-            if (button) {
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-        }).catch(error => {
-            console.error('❌ Fout bij exporteren:', error);
-            alert('❌ Kan afbeelding niet genereren. Probeer opnieuw.');
-            if (button) {
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-        });
+        const link = document.createElement('a');
+        link.download = `PantaClub_QR_${serienummer}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('✅ QR-afbeelding gedownload');
+        showMessage('✅ Afbeelding gedownload!');
     } catch (error) {
         console.error('❌ Fout bij downloaden:', error);
-        alert('❌ Kan QR-code niet downloaden.');
-        if (button) {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
+        alert('❌ Kan afbeelding niet downloaden. Probeer opnieuw.');
     }
 }
 
@@ -1017,6 +1365,15 @@ window.editModel = editModel;
 window.saveModel = saveModel;
 window.cancelEditModel = cancelEditModel;
 window.deleteModel = deleteModel;
+
+// Klanten functies
+window.showAddKlantForm = showAddKlantForm;
+window.hideAddKlantForm = hideAddKlantForm;
+window.loadKlanten = loadKlanten;
+window.editKlant = editKlant;
+window.saveKlant = saveKlant;
+window.cancelEditKlant = cancelEditKlant;
+window.deleteKlant = deleteKlant;
 
 // QR-code functies
 window.showQRCode = showQRCode;
