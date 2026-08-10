@@ -184,7 +184,7 @@ const PAGES = {
                     <p style="color: #666; margin-bottom: 15px;">
                         Upload een Excel bestand (.xlsx of .xls) met fietsgegevens.
                         <br><small style="color: #999;">De eerste rij moet de kolomnamen bevatten.</small>
-                        <br><small style="color: #999;">Gebruik het tabblad <strong>"stocklijst"</strong>.</small>
+                        <br><small style="color: #999;">Kies het tabblad <strong>"stocklijst"</strong> of selecteer het juiste tabblad.</small>
                     </p>
                     
                     <div style="border: 2px dashed #E0DCD6; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer;" 
@@ -695,7 +695,8 @@ function editModel(modelId) {
 }
 
 // ============================================
-// MODEL OPSLAAN// ============================================
+// MODEL OPSLAAN
+// ============================================
 
 async function saveModel(modelId) {
     console.log('💾 Opslaan van model:', modelId);
@@ -1267,28 +1268,61 @@ function processFietsExcelFile(file) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // Zoek het tabblad "stocklijst"
-            let sheetName = 'stocklijst';
-            if (!workbook.SheetNames.includes(sheetName)) {
-                sheetName = workbook.SheetNames[0];
-                console.warn('⚠️ Tabblad "stocklijst" niet gevonden, gebruik:', sheetName);
+            const sheetNames = workbook.SheetNames;
+            
+            // Kijk of er een tabblad "stocklijst" is
+            let stockSheetExists = sheetNames.includes('stocklijst');
+            let sheetName = sheetNames[0];
+            
+            if (stockSheetExists) {
+                sheetName = 'stocklijst';
+                console.log('✅ Tabblad "stocklijst" gevonden, gebruiken deze.');
+            } else if (sheetNames.length > 1) {
+                // Als er meerdere tabbladen zijn maar geen stocklijst, toon keuze
+                const userChoice = confirm(
+                    `Er zijn ${sheetNames.length} tabbladen gevonden:\n\n` +
+                    sheetNames.map((name, i) => `${i+1}. ${name}`).join('\n') +
+                    `\n\nWil je het eerste tabblad ("${sheetNames[0]}") gebruiken?\n` +
+                    `Klik "OK" voor "${sheetNames[0]}" of "Annuleren" om te kiezen.`
+                );
+                
+                if (!userChoice) {
+                    const choice = prompt(
+                        `Welk tabblad wil je gebruiken?\n\n` +
+                        sheetNames.map((name, i) => `${i+1}. ${name}`).join('\n') +
+                        `\n\nVoer het nummer in (1-${sheetNames.length}):`,
+                        '1'
+                    );
+                    
+                    if (choice) {
+                        const index = parseInt(choice) - 1;
+                        if (index >= 0 && index < sheetNames.length) {
+                            sheetName = sheetNames[index];
+                        }
+                    }
+                }
+            } else {
+                sheetName = sheetNames[0];
+                console.log('ℹ️ Slechts 1 tabblad gevonden:', sheetName);
             }
+            
+            console.log('📋 Gebruik tabblad:', sheetName);
             
             const sheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(sheet);
             
             if (!jsonData || jsonData.length === 0) {
-                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Geen data gevonden in het bestand.</p>';
+                statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Geen data gevonden in tabblad "${sheetName}".</p>`;
                 return;
             }
             
             fietsExcelHeaders = Object.keys(jsonData[0]);
             fietsExcelData = jsonData;
             
-            showFietsExcelPreview(jsonData);
+            showFietsExcelPreview(jsonData, sheetName);
             
             statusDiv.innerHTML = `
-                <p style="color: #28a745;">✅ ${jsonData.length} fietsen gevonden.</p>
+                <p style="color: #28a745;">✅ ${jsonData.length} fietsen gevonden in tabblad "${sheetName}".</p>
                 <p style="color: #666; font-size:0.85rem;">Kolommen: ${fietsExcelHeaders.join(', ')}</p>
             `;
             
@@ -1303,7 +1337,7 @@ function processFietsExcelFile(file) {
     reader.readAsArrayBuffer(file);
 }
 
-function showFietsExcelPreview(data) {
+function showFietsExcelPreview(data, sheetName) {
     const previewDiv = document.getElementById('fietsExcelPreview');
     const contentDiv = document.getElementById('fietsExcelPreviewContent');
     
@@ -1311,7 +1345,8 @@ function showFietsExcelPreview(data) {
     
     const previewData = data.slice(0, 10);
     
-    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+    let html = `<p style="color: #666; font-size:0.9rem; margin-bottom:10px;">📋 Tabblad: <strong>${sheetName || 'Onbekend'}</strong></p>`;
+    html += '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
     html += '<thead><tr style="background:#1A2B4C;color:white;">';
     fietsExcelHeaders.forEach(header => {
         html += `<th style="padding:8px 12px;text-align:left;white-space:nowrap;">${header}</th>`;
@@ -1360,14 +1395,12 @@ async function importFietsExcelData() {
     let matchedModels = [];
     
     try {
-        // Haal bestaande modellen op
         const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*');
         
         if (modellenError) throw modellenError;
         
-        // Haal bestaande fietsen op voor duplicate check
         const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('serienummer');
@@ -1376,7 +1409,6 @@ async function importFietsExcelData() {
         
         const bestaandeSerienummers = new Set(bestaandeFietsen.map(f => f.serienummer));
         
-        // Haal klanten op voor koppeling
         const { data: alleKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('id, naam');
