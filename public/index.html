@@ -27,19 +27,25 @@
          NAVIGATIE
          ============================================ -->
     <nav class="navbar">
-        <div class="container">
-            <div class="navbar-brand">
-                <span>🚲 Panta Club</span>
-            </div>
-            <ul class="navbar-links">
-                <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
-                <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
-                <li><a href="#" data-page="klanten">👤 Klanten</a></li>
-                <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
-                <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
-            </ul>
+    <div class="container">
+        <div class="navbar-brand">
+            <span>🚲 Panta Club</span>
         </div>
-    </nav>
+        
+        <!-- Hamburger menu knop (alleen zichtbaar op mobiel) -->
+        <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
+            ☰
+        </button>
+        
+        <ul class="navbar-links" id="navbarLinks">
+            <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
+            <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
+            <li><a href="#" data-page="klanten">👤 Klanten</a></li>
+            <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
+            <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
+        </ul>
+    </div>
+</nav>
     
     <!-- ============================================
          HOOFD INHOUD
