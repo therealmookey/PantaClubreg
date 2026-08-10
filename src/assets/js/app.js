@@ -1650,7 +1650,7 @@ function toonVerhuurLijst(data, footerText) {
         
         const isActief = !verhuur.eind_datum;
         const statusClass = isActief ? 'badge-rented' : 'badge-available';
-        const statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+        const statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
         
         const startDatum = new Date(verhuur.start_datum);
         const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
