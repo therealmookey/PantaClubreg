@@ -1,6 +1,5 @@
 /* ============================================
    ALGEMENE STIJLEN - Panta Club Huisstijl
-   RESPONSIVE VOOR ALLE SCHERMEN
    ============================================ */
 
 /* ----- RESET & BASIS ----- */
@@ -16,7 +15,6 @@ body {
     color: #1A2B4C;
     line-height: 1.6;
     min-height: 100vh;
-    font-size: 16px; /* Basis grootte voor responsive */
 }
 
 /* ----- KLEUREN (Huisstijl Panta Club) ----- */
@@ -28,15 +26,30 @@ body {
     --text-light: #FFFFFF;
     --shadow-soft: 0 4px 20px rgba(26, 43, 76, 0.1);
     --border-radius: 12px;
-    --container-width: 90%; /* Standaard voor mobiel */
 }
 
-/* ----- CONTAINER ----- */
+/* ============================================
+   CONTAINER - 80% BREEDTE
+   ============================================ */
 .container {
-    max-width: 1200px;
-    width: var(--container-width);
+    max-width: 80%;        /* ← 80% breedte zoals gewenst */
     margin: 0 auto;
-    padding: 0 15px;
+    padding: 0 20px;
+}
+
+/* Voor zeer kleine schermen: iets breder */
+@media (max-width: 480px) {
+    .container {
+        max-width: 92%;
+        padding: 0 10px;
+    }
+}
+
+/* Voor grote schermen: maximale breedte beperken */
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1200px;  /* Niet breder dan 1200px op grote schermen */
+    }
 }
 
 /* ============================================
@@ -99,11 +112,9 @@ body {
     border-bottom-color: var(--accent-orange);
 }
 
-/* ============================================
-   MOBIEL NAVIGATIE (hamburger menu)
-   ============================================ */
+/* ----- Hamburger menu knop (verborgen op desktop) ----- */
 .menu-toggle {
-    display: none; /* Verborgen op desktop */
+    display: none;
     background: none;
     border: none;
     color: white;
@@ -112,10 +123,14 @@ body {
     padding: 5px 10px;
 }
 
-/* Mobiele navigatie - standaard verborgen */
+/* ============================================
+   RESPONSIVE - TABLET & MOBIEL
+   ============================================ */
+
+/* Tablet en kleinere schermen */
 @media (max-width: 768px) {
     .menu-toggle {
-        display: block; /* Zichtbaar op mobiel */
+        display: block;
     }
     
     .navbar .container {
@@ -123,7 +138,7 @@ body {
     }
     
     .navbar-links {
-        display: none; /* Verborgen op mobiel */
+        display: none;
         width: 100%;
         flex-direction: column;
         align-items: center;
@@ -133,7 +148,7 @@ body {
     }
     
     .navbar-links.open {
-        display: flex; /* Getoond wanneer open */
+        display: flex;
     }
     
     .navbar-links a {
@@ -142,6 +157,7 @@ body {
         padding: 12px 0;
         font-size: 1rem;
         border-bottom: 1px solid rgba(255,255,255,0.05);
+        white-space: normal;
     }
     
     .navbar-links a:last-child {
@@ -150,11 +166,11 @@ body {
 }
 
 /* ============================================
-   KNOMMEN - GROTER OP MOBIEL
+   KNOMMEN - RESPONSIVE
    ============================================ */
 .btn {
     display: inline-block;
-    padding: 14px 28px; /* Iets groter voor touch */
+    padding: 14px 28px;
     border: none;
     border-radius: 50px;
     font-family: 'Poppins', sans-serif;
@@ -164,8 +180,8 @@ body {
     transition: all 0.3s ease;
     text-decoration: none;
     text-align: center;
-    min-height: 50px; /* Minimum hoogte voor touch */
-    min-width: 48px; /* Minimum breedte voor touch */
+    min-height: 50px;
+    min-width: 48px;
 }
 
 .btn-primary {
@@ -190,7 +206,6 @@ body {
     box-shadow: var(--shadow-soft);
 }
 
-/* Knoppen naast elkaar op mobiel */
 .btn-group {
     display: flex;
     flex-wrap: wrap;
@@ -203,11 +218,12 @@ body {
     min-width: 120px;
 }
 
+/* Knoppen op mobiel */
 @media (max-width: 480px) {
     .btn {
         padding: 12px 20px;
         font-size: 0.9rem;
-        width: 100%; /* Volledige breedte op kleine schermen */
+        width: 100%;
     }
     
     .btn-group .btn {
@@ -221,7 +237,7 @@ body {
 .card {
     background: white;
     border-radius: var(--border-radius);
-    padding: 20px;
+    padding: 24px;
     box-shadow: var(--shadow-soft);
     transition: transform 0.3s ease;
     margin-bottom: 20px;
@@ -243,55 +259,65 @@ body {
    ============================================ */
 .hero {
     text-align: center;
-    padding: 40px 15px;
+    padding: 60px 20px;
     background: linear-gradient(135deg, #F8F6F3 0%, #EDE8E0 100%);
     border-radius: var(--border-radius);
-    margin: 20px 0;
+    margin: 30px 0;
 }
 
 .hero h1 {
-    font-size: 2.8rem;
+    font-size: 3rem;
     color: var(--primary-blue);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .hero .subtitle {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: #666;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
 }
 
 .hero .emoji-big {
-    font-size: 3.5rem;
+    font-size: 4rem;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 @media (max-width: 768px) {
     .hero {
-        padding: 30px 15px;
+        padding: 40px 15px;
+        margin: 20px 0;
     }
     
     .hero h1 {
-        font-size: 2rem;
+        font-size: 2.2rem;
     }
     
     .hero .subtitle {
-        font-size: 0.95rem;
+        font-size: 1rem;
     }
     
     .hero .emoji-big {
-        font-size: 2.8rem;
+        font-size: 3rem;
     }
 }
 
 @media (max-width: 480px) {
+    .hero {
+        padding: 30px 15px;
+        margin: 15px 0;
+    }
+    
     .hero h1 {
         font-size: 1.6rem;
     }
     
     .hero .subtitle {
         font-size: 0.85rem;
+    }
+    
+    .hero .emoji-big {
+        font-size: 2.5rem;
     }
 }
 
@@ -352,7 +378,7 @@ body {
 }
 
 /* ============================================
-   RECENTE ACTIVITEIT - RESPONSIVE
+   ACTIVITEITENLIJST - RESPONSIVE
    ============================================ */
 .activity-list {
     list-style: none;
@@ -389,7 +415,7 @@ body {
 }
 
 /* ============================================
-   GRID LAYOUT - RESPONSIVE
+   GRID - RESPONSIVE
    ============================================ */
 .grid-3 {
     display: grid;
@@ -468,7 +494,7 @@ body {
     font-size: 1rem;
     transition: border-color 0.3s ease;
     background-color: white;
-    min-height: 48px; /* Touch friendly */
+    min-height: 48px;
 }
 
 .form-group input:focus,
@@ -483,7 +509,7 @@ body {
     .form-group input,
     .form-group select,
     .form-group textarea {
-        font-size: 16px; /* Voorkomt zoom op iOS */
+        font-size: 16px;
         padding: 10px 12px;
     }
 }
@@ -542,14 +568,11 @@ table tbody tr:hover {
 /* ============================================
    ALGEMENE RESPONSIVE FIXES
    ============================================ */
-
-/* Afbeeldingen schalen */
 img {
     max-width: 100%;
     height: auto;
 }
 
-/* Tekst aanpassen op kleine schermen */
 @media (max-width: 480px) {
     body {
         font-size: 15px;
@@ -559,15 +582,4 @@ img {
     h2 { font-size: 1.4rem; }
     h3 { font-size: 1.2rem; }
     h4 { font-size: 1rem; }
-}
-
-/* Padding aanpassen */
-@media (max-width: 480px) {
-    .container {
-        padding: 0 12px;
-    }
-    
-    .card {
-        padding: 14px;
-    }
 }

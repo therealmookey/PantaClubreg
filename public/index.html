@@ -13,46 +13,41 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Eigen CSS (nu in aparte bestanden!) -->
+    <!-- Eigen CSS (apart bestand) -->
     <link rel="stylesheet" href="../src/assets/css/style.css">
     <link rel="stylesheet" href="../src/assets/css/components.css">
-    
-    <!-- ============================================
-         ALLE JAVASCRIPT BLIJFT IN DE HTML
-         (Later verhuizen we dit ook naar aparte bestanden)
-         ============================================ -->
 </head>
 <body>
     <!-- ============================================
          NAVIGATIE
          ============================================ -->
     <nav class="navbar">
-    <div class="container">
-        <div class="navbar-brand">
-            <span>🚲 Panta Club</span>
+        <div class="container">
+            <div class="navbar-brand">
+                <span>🚲 Panta Club</span>
+            </div>
+            
+            <!-- Hamburger menu (alleen zichtbaar op mobiel) -->
+            <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
+                ☰
+            </button>
+            
+            <ul class="navbar-links" id="navbarLinks">
+                <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
+                <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
+                <li><a href="#" data-page="klanten">👤 Klanten</a></li>
+                <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
+                <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
+            </ul>
         </div>
-        
-        <!-- Hamburger menu knop (alleen zichtbaar op mobiel) -->
-        <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
-            ☰
-        </button>
-        
-        <ul class="navbar-links" id="navbarLinks">
-            <li><a href="#" class="active" data-page="dashboard">📊 Dashboard</a></li>
-            <li><a href="#" data-page="fietsen">🚲 Fietsen</a></li>
-            <li><a href="#" data-page="klanten">👤 Klanten</a></li>
-            <li><a href="#" data-page="onderhoud">🔧 Onderhoud</a></li>
-            <li><a href="#" id="logout-link">🚪 Uitloggen</a></li>
-        </ul>
-    </div>
-</nav>
+    </nav>
     
     <!-- ============================================
          HOOFD INHOUD
          ============================================ -->
     <main id="main-content">
         <div class="container">
-            <!-- Dashboard wordt hier geladen -->
+            <!-- Dashboard wordt hier geladen via JavaScript -->
         </div>
     </main>
     
@@ -80,10 +75,10 @@
         // ============================================
         
         console.log('🚀 Panta Club Fietsregistratie gestart!');
-        console.log('📁 CSS wordt nu geladen uit aparte bestanden!');
+        console.log('📁 CSS wordt geladen uit aparte bestanden');
         
         // ============================================
-        // PAGINA'S
+        // PAGINA'S (dynamische content)
         // ============================================
         
         const PAGES = {
@@ -92,7 +87,7 @@
                     <span class="emoji-big">🚲</span>
                     <h1>Welkom bij Panta Club!</h1>
                     <p class="subtitle">Fietsregistratie Platform - Beheer jouw fietsen, klanten en onderhoud</p>
-                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <div class="btn-group">
                         <button class="btn btn-primary" onclick="showMessage('Fietsen pagina komt binnenkort!')">
                             ➕ Fiets toevoegen
                         </button>
@@ -126,18 +121,18 @@
                 
                 <div class="card">
                     <h3 style="margin-bottom: 15px;">📌 Recente activiteit</h3>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                    <ul class="activity-list">
+                        <li>
                             🚲 Fiets #12345 toegevoegd
-                            <span style="color: #999; font-size: 0.85rem; float: right;">10 min geleden</span>
+                            <span class="time">10 min geleden</span>
                         </li>
-                        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                        <li>
                             👤 Nieuwe klant: Marie Peeters
-                            <span style="color: #999; font-size: 0.85rem; float: right;">1 uur geleden</span>
+                            <span class="time">1 uur geleden</span>
                         </li>
-                        <li style="padding: 10px 0;">
+                        <li>
                             🔧 Onderhoud geregistreerd voor fiets #67890
-                            <span style="color: #999; font-size: 0.85rem; float: right;">3 uur geleden</span>
+                            <span class="time">3 uur geleden</span>
                         </li>
                     </ul>
                 </div>
@@ -147,9 +142,11 @@
                 <div style="padding: 30px 0;">
                     <h1>🚲 Fietsen</h1>
                     <p style="color: #666; margin-bottom: 20px;">Beheer hier alle fietsen.</p>
+                    
                     <button class="btn btn-primary" onclick="showMessage('Nieuwe fiets toevoegen komt binnenkort!')">
                         ➕ Nieuwe fiets toevoegen
                     </button>
+                    
                     <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
                         <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
                         <h3>Geen fietsen gevonden</h3>
@@ -162,12 +159,16 @@
                 <div style="padding: 30px 0;">
                     <h1>👤 Klanten</h1>
                     <p style="color: #666; margin-bottom: 20px;">Beheer hier alle klanten.</p>
-                    <button class="btn btn-primary" onclick="showMessage('Nieuwe klant toevoegen komt binnenkort!')">
-                        ➕ Nieuwe klant toevoegen
-                    </button>
-                    <button class="btn btn-accent" onclick="showMessage('Excel import komt binnenkort!')">
-                        📊 Importeer Excel
-                    </button>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showMessage('Nieuwe klant toevoegen komt binnenkort!')">
+                            ➕ Nieuwe klant toevoegen
+                        </button>
+                        <button class="btn btn-accent" onclick="showMessage('Excel import komt binnenkort!')">
+                            📊 Importeer Excel
+                        </button>
+                    </div>
+                    
                     <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
                         <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
                         <h3>Geen klanten gevonden</h3>
@@ -180,9 +181,11 @@
                 <div style="padding: 30px 0;">
                     <h1>🔧 Onderhoudsboekje</h1>
                     <p style="color: #666; margin-bottom: 20px;">Registreer onderhoudsbeurten per fiets.</p>
+                    
                     <button class="btn btn-primary" onclick="showMessage('Onderhoud registreren komt binnenkort!')">
                         ➕ Nieuw onderhoud registreren
                     </button>
+                    
                     <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
                         <div style="font-size: 3rem; margin-bottom: 10px;">🔧</div>
                         <h3>Geen onderhoudsbeurten</h3>
@@ -213,6 +216,16 @@
                     link.classList.add('active');
                 }
             });
+            
+            // Sluit mobiel menu na klik
+            const navbarLinks = document.getElementById('navbarLinks');
+            const menuToggle = document.getElementById('menuToggle');
+            if (navbarLinks) {
+                navbarLinks.classList.remove('open');
+            }
+            if (menuToggle) {
+                menuToggle.textContent = '☰';
+            }
         }
         
         function showMessage(message) {
@@ -227,19 +240,56 @@
         }
         
         // ============================================
+        // HAMBURGER MENU
+        // ============================================
+        
+        function setupMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const navbarLinks = document.getElementById('navbarLinks');
+            
+            if (menuToggle && navbarLinks) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    navbarLinks.classList.toggle('open');
+                    this.textContent = navbarLinks.classList.contains('open') ? '✕' : '☰';
+                    this.setAttribute('aria-label', 
+                        navbarLinks.classList.contains('open') ? 'Menu sluiten' : 'Menu openen'
+                    );
+                });
+                
+                // Sluit menu als er op een link wordt geklikt
+                navbarLinks.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navbarLinks.classList.remove('open');
+                        if (menuToggle) {
+                            menuToggle.textContent = '☰';
+                        }
+                    });
+                });
+            }
+        }
+        
+        // ============================================
         // START
         // ============================================
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ DOM geladen!');
-            console.log('✅ CSS wordt geladen uit: ../src/assets/css/style.css');
+            
+            // Start met dashboard
             navigateTo('dashboard');
             
+            // Setup mobiel menu
+            setupMobileMenu();
+            
             // Logout link
-            document.getElementById('logout-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                handleLogout();
-            });
+            const logoutLink = document.getElementById('logout-link');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleLogout();
+                });
+            }
             
             // Navigatie links
             document.querySelectorAll('.navbar-links a[data-page]').forEach(link => {
@@ -248,43 +298,14 @@
                     navigateTo(this.getAttribute('data-page'));
                 });
             });
+            
+            console.log('✅ Applicatie klaar voor gebruik!');
         });
-		// ============================================
-// HAMBURGER MENU - MOBIEL
-// ============================================
-
-const menuToggle = document.getElementById('menuToggle');
-const navbarLinks = document.getElementById('navbarLinks');
-
-if (menuToggle && navbarLinks) {
-    menuToggle.addEventListener('click', function() {
-        navbarLinks.classList.toggle('open');
-        // Verander het icoon
-        this.textContent = navbarLinks.classList.contains('open') ? '✕' : '☰';
-        this.setAttribute('aria-label', 
-            navbarLinks.classList.contains('open') ? 'Menu sluiten' : 'Menu openen'
-        );
-    });
-    
-    // Sluit menu als er op een link wordt geklikt
-    navbarLinks.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', function() {
-            navbarLinks.classList.remove('open');
-            menuToggle.textContent = '☰';
-        });
-    });
-}
-
-// Sluit menu als er buiten geklikt wordt
-document.addEventListener('click', function(event) {
-    const isClickInsideNav = event.target.closest('.navbar');
-    if (!isClickInsideNav && navbarLinks) {
-        navbarLinks.classList.remove('open');
-        if (menuToggle) {
-            menuToggle.textContent = '☰';
-        }
-    }
-});
+        
+        // Maak functies globaal beschikbaar
+        window.navigateTo = navigateTo;
+        window.showMessage = showMessage;
+        window.handleLogout = handleLogout;
     </script>
 </body>
 </html>
