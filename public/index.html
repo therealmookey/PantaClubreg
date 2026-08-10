@@ -249,6 +249,42 @@
                 });
             });
         });
+		// ============================================
+// HAMBURGER MENU - MOBIEL
+// ============================================
+
+const menuToggle = document.getElementById('menuToggle');
+const navbarLinks = document.getElementById('navbarLinks');
+
+if (menuToggle && navbarLinks) {
+    menuToggle.addEventListener('click', function() {
+        navbarLinks.classList.toggle('open');
+        // Verander het icoon
+        this.textContent = navbarLinks.classList.contains('open') ? '✕' : '☰';
+        this.setAttribute('aria-label', 
+            navbarLinks.classList.contains('open') ? 'Menu sluiten' : 'Menu openen'
+        );
+    });
+    
+    // Sluit menu als er op een link wordt geklikt
+    navbarLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function() {
+            navbarLinks.classList.remove('open');
+            menuToggle.textContent = '☰';
+        });
+    });
+}
+
+// Sluit menu als er buiten geklikt wordt
+document.addEventListener('click', function(event) {
+    const isClickInsideNav = event.target.closest('.navbar');
+    if (!isClickInsideNav && navbarLinks) {
+        navbarLinks.classList.remove('open');
+        if (menuToggle) {
+            menuToggle.textContent = '☰';
+        }
+    }
+});
     </script>
 </body>
 </html>
