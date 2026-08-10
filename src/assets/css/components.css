@@ -1,97 +1,45 @@
-/*
-============================================
-COMPONENT STIJLEN
-============================================
-Stijlen voor specifieke componenten zoals
-navigatie, modals, formulieren, etc.
-============================================
-*/
+/* ============================================
+   COMPONENT STIJLEN
+   ============================================ */
 
-/* ----- NAVIGATIE (wordt via JS ingeladen) ----- */
-.navbar {
-    background-color: var(--primary-blue);
-    padding: 16px 0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
+/* ----- TOAST MELDINGEN (later gebruiken we dit) ----- */
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 3000;
 }
 
-.navbar .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.navbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.navbar-brand img {
-    height: 40px;
-    width: auto;
-}
-
-.navbar-brand span {
-    color: white;
-    font-weight: 700;
-    font-size: 1.2rem;
-}
-
-.navbar-links {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    list-style: none;
-}
-
-.navbar-links a {
-    color: rgba(255,255,255,0.8);
-    font-weight: 500;
-    transition: color 0.3s ease;
-    padding: 6px 0;
-    border-bottom: 2px solid transparent;
-}
-
-.navbar-links a:hover {
-    color: white;
-    border-bottom-color: var(--accent-orange);
-}
-
-.navbar-links a.active {
-    color: white;
-    border-bottom-color: var(--accent-orange);
-}
-
-/* ----- LOGIN PAGINA ----- */
-.login-container {
-    max-width: 420px;
-    margin: 60px auto;
-    padding: 40px;
+.toast {
     background: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-soft);
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    margin-bottom: 10px;
+    border-left: 4px solid var(--primary-blue);
+    animation: slideIn 0.3s ease;
 }
 
-.login-container h1 {
-    text-align: center;
-    margin-bottom: 8px;
+.toast-success {
+    border-left-color: #28a745;
 }
 
-.login-container .subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 30px;
+.toast-error {
+    border-left-color: #dc3545;
 }
 
-.login-container .form-group {
-    margin-bottom: 20px;
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
-/* ----- MODAL (voor pop-ups) ----- */
+/* ----- MODAL (later gebruiken we dit) ----- */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -118,79 +66,9 @@ navigatie, modals, formulieren, etc.
     overflow-y: auto;
     padding: 30px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    animation: modalSlideIn 0.3s ease;
 }
 
-@keyframes modalSlideIn {
-    from {
-        transform: translateY(-30px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    cursor: pointer;
-    color: #999;
-    transition: color 0.3s;
-}
-
-.modal-close:hover {
-    color: var(--primary-blue);
-}
-
-/* ----- TOAST MELDINGEN ----- */
-.toast-container {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    z-index: 3000;
-}
-
-.toast {
-    background: white;
-    padding: 16px 24px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    margin-bottom: 10px;
-    border-left: 4px solid var(--primary-blue);
-    animation: toastSlide 0.3s ease;
-    min-width: 280px;
-}
-
-.toast-success {
-    border-left-color: #28a745;
-}
-
-.toast-error {
-    border-left-color: #dc3545;
-}
-
-@keyframes toastSlide {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* ----- QR-CODE WEERGAVE ----- */
+/* ----- QR-CODE (later gebruiken we dit) ----- */
 .qr-code-container {
     display: flex;
     flex-direction: column;
@@ -206,20 +84,69 @@ navigatie, modals, formulieren, etc.
     padding: 8px;
 }
 
-/* ----- RESPONSIVE NAVIGATIE ----- */
-@media (max-width: 768px) {
-    .navbar .container {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .navbar-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 12px 20px;
-    }
-    
-    .navbar-links a {
-        font-size: 0.9rem;
-    }
+/* ----- FORMULIEREN ----- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--primary-blue);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #E0DCD6;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    background-color: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(26, 43, 76, 0.1);
+}
+
+/* ----- TABELLEN ----- */
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+}
+
+table thead {
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+}
+
+table th {
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 600;
+}
+
+table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid #F0EDE8;
+}
+
+table tbody tr:hover {
+    background-color: #F8F6F3;
 }
