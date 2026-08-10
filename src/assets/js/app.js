@@ -791,8 +791,24 @@ function showMessage(message) {
  * Toont een QR-code in een modal/popup
  * @param {string} serienummer - Het serienummer van de fiets
  */
-function showQRCode(serienummer) {
+async function showQRCode(serienummer) {
     console.log('📱 Toon QR-code voor:', serienummer);
+    
+    // Haal de fietsgegevens op uit de database
+    let fietsGegevens = null;
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select(`*, fiets_modellen (merk, model, kleur)`)
+            .eq('serienummer', serienummer)
+            .single();
+        
+        if (!error && data) {
+            fietsGegevens = data;
+        }
+    } catch (error) {
+        console.warn('⚠️ Kan fietsgegevens niet ophalen:', error);
+    }
     
     // Maak een modal aan als die nog niet bestaat
     let modal = document.getElementById('qrModal');
@@ -810,14 +826,15 @@ function showQRCode(serienummer) {
             z-index: 9999;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         `;
         modal.innerHTML = `
             <div style="
                 background: white;
                 border-radius: 12px;
                 padding: 30px;
-                max-width: 400px;
-                width: 90%;
+                max-width: 450px;
+                width: 100%;
                 text-align: center;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                 position: relative;
@@ -832,17 +849,30 @@ function showQRCode(serienummer) {
                     cursor: pointer;
                     color: #999;
                 ">✕</button>
-                <h3 style="margin-bottom: 10px;">🚲 QR-code</h3>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">
-                    Scan deze QR-code om de fietsinformatie te bekijken
-                </p>
-                <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 20px 0;"></div>
-                <p style="color: #999; font-size: 0.85rem; word-break: break-all;">
-                    <strong>Serienummer:</strong> <span id="qrSerienummer"></span>
-                </p>
-                <button onclick="window.downloadQRCode()" class="btn btn-primary" style="margin-top: 15px;">
-                    ⬇️ Download QR-code
-                </button>
+                
+                <div id="qrExportContainer" style="padding: 10px;">
+                    <h3 style="margin-bottom: 5px; color: #1A2B4C;">🚲 Panta Club</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                        Scan de QR-code voor fietsinformatie
+                    </p>
+                    
+                    <!-- QR-code container -->
+                    <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 10px 0;"></div>
+                    
+                    <!-- Fietsgegevens onder de QR -->
+                    <div id="qrFietsInfo" style="margin-top: 10px; padding: 10px; background: #f8f6f3; border-radius: 8px;">
+                        <p style="margin: 3px 0; font-weight: 600; color: #1A2B4C;" id="qrModelDisplay">-</p>
+                        <p style="margin: 3px 0; color: #666; font-size: 0.9rem;">
+                            Serienummer: <strong id="qrSerienummerDisplay">-</strong>
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+                    <button onclick="window.downloadQRCode()" class="btn btn-primary">
+                        ⬇️ Download afbeelding
+                    </button>
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -860,18 +890,34 @@ function showQRCode(serienummer) {
     
     // Genereer de QR-code in de container
     const container = document.getElementById('qrCodeContainer');
-    const serienummerSpan = document.getElementById('qrSerienummer');
+    const modelDisplay = document.getElementById('qrModelDisplay');
+    const serienummerDisplay = document.getElementById('qrSerienummerDisplay');
+    
     if (container) {
         container.innerHTML = '';
-        document.getElementById('qrSerienummer').textContent = serienummer;
+        
+        // Toon fietsgegevens
+        if (fietsGegevens && fietsGegevens.fiets_modellen) {
+            const model = fietsGegevens.fiets_modellen;
+            const kleurStyle = `display:inline-block;width:14px;height:14px;border-radius:50%;background:${model.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;`;
+            modelDisplay.innerHTML = `
+                <span style="${kleurStyle}"></span>
+                ${model.merk} ${model.model} (${model.kleur})
+            `;
+        } else {
+            modelDisplay.textContent = 'Onbekend model';
+        }
+        
+        serienummerDisplay.textContent = serienummer;
         
         // Sla het serienummer op voor download
         window._currentQRSerienummer = serienummer;
+        window._currentQRFietsData = fietsGegevens;
         
-        // Genereer QR - ALLEEN serienummer als tekst
+        // Genereer QR - ALLEEN het serienummer
         try {
             new QRCode(container, {
-                text: serienummer,  // ← ALLEEN het serienummer!
+                text: serienummer,
                 width: 200,
                 height: 200,
                 colorDark: '#1A2B4C',
@@ -896,27 +942,60 @@ function closeQRModal() {
 }
 
 /**
- * Downloadt de QR-code als afbeelding
+ * Downloadt de QR-code als afbeelding met fietsgegevens
  */
 function downloadQRCode() {
-    const container = document.getElementById('qrCodeContainer');
-    if (!container) return;
-    
-    const canvas = container.querySelector('canvas');
-    if (!canvas) {
+    const container = document.getElementById('qrExportContainer');
+    if (!container) {
         alert('❌ Geen QR-code om te downloaden.');
         return;
     }
     
+    // Toon een laadmelding
+    const button = document.querySelector('#qrModal .btn-primary');
+    const originalText = button ? button.textContent : 'Downloaden...';
+    if (button) {
+        button.textContent = '⏳ Bezig...';
+        button.disabled = true;
+    }
+    
     try {
-        const link = document.createElement('a');
-        link.download = `QR_${window._currentQRSerienummer || 'fiets'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        console.log('✅ QR-code gedownload');
+        // Gebruik html2canvas om de container om te zetten naar een afbeelding
+        html2canvas(container, {
+            scale: 2,  // Hogere kwaliteit
+            backgroundColor: '#ffffff',
+            allowTaint: true,
+            useCORS: true,
+            logging: false
+        }).then(canvas => {
+            // Maak een downloadlink
+            const link = document.createElement('a');
+            link.download = `PantaClub_QR_${window._currentQRSerienummer || 'fiets'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            console.log('✅ QR-afbeelding gedownload');
+            
+            // Herstel de knop
+            if (button) {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }).catch(error => {
+            console.error('❌ Fout bij exporteren:', error);
+            alert('❌ Kan afbeelding niet genereren. Probeer opnieuw.');
+            if (button) {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        });
     } catch (error) {
         console.error('❌ Fout bij downloaden:', error);
         alert('❌ Kan QR-code niet downloaden.');
+        if (button) {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
     }
 }
 
