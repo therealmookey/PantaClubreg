@@ -1,6 +1,6 @@
 /**
  * ============================================
- * HOOFDAPPLICATIE - MET MODELLEN, FIETSEN EN KLANTEN
+ * HOOFDAPPLICATIE - MET MODELLEN, FIETSEN, KLANTEN EN VERHUUR
  * ============================================
  */
 
@@ -59,7 +59,7 @@ const PAGES = {
         <div style="padding: 20px 0;">
             <h1>👋 Welkom bij Panta Club!</h1>
             <p style="color: #666; margin-bottom: 30px;">
-                Beheer hier jouw fietsmodellen, individuele fietsen, klanten en onderhoud.
+                Beheer hier jouw fietsmodellen, individuele fietsen, klanten, verhuur en onderhoud.
             </p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0;">
@@ -79,6 +79,11 @@ const PAGES = {
                     <p style="color: #666; margin: 0;">Klanten</p>
                 </div>
                 <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
+                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-verhuur">0</h3>
+                    <p style="color: #666; margin: 0;">Actieve verhuur</p>
+                </div>
+                <div class="card" style="text-align: center;">
                     <div style="font-size: 2.5rem; margin-bottom: 8px;">🔧</div>
                     <h3 style="font-size: 1.8rem; margin: 0;" id="stat-onderhoud">0</h3>
                     <p style="color: #666; margin: 0;">Openstaand onderhoud</p>
@@ -96,6 +101,9 @@ const PAGES = {
                     </button>
                     <button class="btn btn-primary" onclick="window.navigateTo('klanten')">
                         👤 Klant toevoegen
+                    </button>
+                    <button class="btn btn-accent" onclick="window.navigateTo('verhuur')">
+                        📋 Verhuur starten
                     </button>
                 </div>
             </div>
@@ -250,10 +258,65 @@ const PAGES = {
         </div>
     `,
     
+    verhuur: `
+        <div style="padding: 20px 0;">
+            <h1>📋 Verhuur</h1>
+            <p style="color: #666; margin-bottom: 20px;">
+                Koppel fietsen aan klanten en hou bij hoe lang ze de fiets hebben.
+            </p>
+            
+            <button class="btn btn-accent" onclick="window.showAddVerhuurForm()" style="margin-bottom: 20px;">
+                ➕ Nieuwe verhuur starten
+            </button>
+            
+            <div id="addVerhuurForm" style="display: none; margin-bottom: 30px;">
+                <div class="card">
+                    <h3>Nieuwe verhuur starten</h3>
+                    <form id="verhuurForm">
+                        <div class="form-group">
+                            <label for="verhuurFiets">Fiets (serienummer) *</label>
+                            <select id="verhuurFiets" required>
+                                <option value="">-- Selecteer een fiets --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="verhuurKlant">Klant *</label>
+                            <select id="verhuurKlant" required>
+                                <option value="">-- Selecteer een klant --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="verhuurStart">Startdatum *</label>
+                            <input type="date" id="verhuurStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="verhuurOpmerkingen">Opmerkingen</label>
+                            <textarea id="verhuurOpmerkingen" rows="2" placeholder="Bijv. fiets is in goede staat"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="submit" class="btn btn-accent">💾 Verhuur starten</button>
+                            <button type="button" class="btn btn-outline" onclick="window.hideAddVerhuurForm()">Annuleren</button>
+                        </div>
+                    </form>
+                    <div id="verhuurFormMessage" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+            
+            <div id="verhuurLijst">
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+                    <h3>Laden van verhuur...</h3>
+                </div>
+            </div>
+        </div>
+    `,
+    
     onderhoud: `
         <div style="padding: 20px 0;">
             <h1>🔧 Onderhoudsboekje</h1>
-            <p style="color: #666; margin-bottom: 20px;">Registreer onderhoudsbeurten per fiets. (Komt binnenkort)</p>
+            <p style="color: #666; margin-bottom: 20px;">
+                Registreer onderhoudsbeurten per fiets. (Komt binnenkort)
+            </p>
             <div class="card" style="text-align: center; padding: 40px;">
                 <div style="font-size: 3rem; margin-bottom: 10px;">🔧</div>
                 <h3>Onderhoudsboekje komt binnenkort</h3>
@@ -292,6 +355,9 @@ function navigateTo(page) {
     }
     if (page === 'klanten') {
         setTimeout(loadKlanten, 100);
+    }
+    if (page === 'verhuur') {
+        setTimeout(loadVerhuur, 100);
     }
     if (page === 'dashboard') {
         setTimeout(loadStats, 100);
@@ -1070,6 +1136,343 @@ async function handleKlantSubmit(event) {
 }
 
 // ============================================
+// VERHUUR FUNCTIES
+// ============================================
+
+function showAddVerhuurForm() {
+    const form = document.getElementById('addVerhuurForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+        loadVerhuurSelectOptions();
+    }
+}
+
+function hideAddVerhuurForm() {
+    const form = document.getElementById('addVerhuurForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+    const message = document.getElementById('verhuurFormMessage');
+    if (message) {
+        message.innerHTML = '';
+    }
+    const formElement = document.getElementById('verhuurForm');
+    if (formElement) {
+        formElement.reset();
+    }
+}
+
+async function loadVerhuurSelectOptions() {
+    const fietsSelect = document.getElementById('verhuurFiets');
+    const klantSelect = document.getElementById('verhuurKlant');
+    
+    if (fietsSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .select(`id, serienummer, fiets_modellen (merk, model, kleur)`)
+                .in('status', ['beschikbaar', 'verhuurd'])
+                .order('serienummer', { ascending: true });
+            
+            if (!error && data) {
+                fietsSelect.innerHTML = '<option value="">-- Selecteer een fiets --</option>';
+                data.forEach(fiets => {
+                    const modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
+                    const label = `${fiets.serienummer} - ${modelInfo.merk} ${modelInfo.model} (${modelInfo.kleur})`;
+                    const option = document.createElement('option');
+                    option.value = fiets.id;
+                    option.textContent = label;
+                    fietsSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden fietsen:', error);
+        }
+    }
+    
+    if (klantSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('klanten')
+                .select('id, naam')
+                .order('naam', { ascending: true });
+            
+            if (!error && data) {
+                klantSelect.innerHTML = '<option value="">-- Selecteer een klant --</option>';
+                data.forEach(klant => {
+                    const option = document.createElement('option');
+                    option.value = klant.id;
+                    option.textContent = klant.naam;
+                    klantSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden klanten:', error);
+        }
+    }
+}
+
+async function loadVerhuur() {
+    console.log('📥 Laden van verhuur...');
+    const lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select(`
+                *,
+                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                klanten (naam, email, telefoon)
+            `)
+            .order('start_datum', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+                    <h3>Geen verhuur gevonden</h3>
+                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fiets</th>
+                            <th>Klant</th>
+                            <th>Start</th>
+                            <th>Eind</th>
+                            <th>Status</th>
+                            <th style="text-align:center;">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach(verhuur => {
+            const fietsInfo = verhuur.individuele_fietsen || { serienummer: 'Onbekend', fiets_modellen: { merk: '', model: '', kleur: '' } };
+            const modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '', kleur: '' };
+            const klantInfo = verhuur.klanten || { naam: 'Onbekend' };
+            
+            const isActief = !verhuur.eind_datum;
+            const statusClass = isActief ? 'badge-rented' : 'badge-available';
+            const statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+            
+            const startDatum = new Date(verhuur.start_datum).toLocaleDateString('nl-BE');
+            const eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum).toLocaleDateString('nl-BE') : '-';
+            
+            html += `
+                <tr id="verhuur-${verhuur.id}">
+                    <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
+                    <td><strong>${klantInfo.naam}</strong></td>
+                    <td>${startDatum}</td>
+                    <td>${eindDatum}</td>
+                    <td><span class="badge ${statusClass}">${statusText}</span></td>
+                    <td style="text-align:center;">
+                        ${isActief ? `
+                            <button class="btn btn-sm btn-success" onclick="window.beëindigVerhuur('${verhuur.id}')" style="margin-right:5px;">
+                                ✅ Beëindigen
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="window.deleteVerhuur('${verhuur.id}')">
+                            🗑️ Verwijderen
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+                Totaal: ${data.length} verhuurregels
+            </p>
+        `;
+        
+        lijst.innerHTML = html;
+    } catch (error) {
+        console.error('❌ Fout bij laden verhuur:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
+
+// ============================================
+// VERHUUR SUBMIT (Toevoegen)
+// ============================================
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'verhuurForm') {
+        event.preventDefault();
+        await handleVerhuurSubmit(event);
+    }
+});
+
+async function handleVerhuurSubmit(event) {
+    const fietsId = document.getElementById('verhuurFiets').value;
+    const klantId = document.getElementById('verhuurKlant').value;
+    const startDatum = document.getElementById('verhuurStart').value;
+    const opmerkingen = document.getElementById('verhuurOpmerkingen').value.trim();
+    const messageDiv = document.getElementById('verhuurFormMessage');
+    const button = event.target.querySelector('button[type="submit"]');
+    const originalText = button.textContent;
+    
+    if (!fietsId || !klantId || !startDatum) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fiets, klant en startdatum zijn verplicht!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Verhuur wordt gestart...</p>';
+    
+    try {
+        const { error: verhuurError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .insert([{
+                fiets_id: fietsId,
+                klant_id: klantId,
+                start_datum: startDatum,
+                opmerkingen: opmerkingen || null
+            }]);
+        
+        if (verhuurError) throw verhuurError;
+        
+        const { error: fietsError } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .update({ status: 'verhuurd' })
+            .eq('id', fietsId);
+        
+        if (fietsError) throw fietsError;
+        
+        messageDiv.innerHTML = `<p style="color: #28a745;">✅ Verhuur succesvol gestart!</p>`;
+        document.getElementById('verhuurForm').reset();
+        
+        setTimeout(() => {
+            hideAddVerhuurForm();
+            loadVerhuur();
+            loadFietsen();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
+// VERHUUR BEËINDIGEN
+// ============================================
+
+async function beëindigVerhuur(verhuurId) {
+    console.log('✅ Beëindigen van verhuur:', verhuurId);
+    
+    if (!confirm('Weet je zeker dat je deze verhuur wilt beëindigen?')) {
+        return;
+    }
+    
+    const eindDatum = new Date().toISOString().split('T')[0];
+    
+    try {
+        const { data: verhuurData, error: verhuurFetchError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('fiets_id')
+            .eq('id', verhuurId)
+            .single();
+        
+        if (verhuurFetchError) throw verhuurFetchError;
+        
+        const { error: updateError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .update({ eind_datum: eindDatum })
+            .eq('id', verhuurId);
+        
+        if (updateError) throw updateError;
+        
+        if (verhuurData && verhuurData.fiets_id) {
+            const { error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .update({ status: 'beschikbaar' })
+                .eq('id', verhuurData.fiets_id);
+            
+            if (fietsError) throw fietsError;
+        }
+        
+        showMessage('✅ Verhuur succesvol beëindigd!');
+        loadVerhuur();
+        loadFietsen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij beëindigen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// VERHUUR VERWIJDEREN
+// ============================================
+
+async function deleteVerhuur(verhuurId) {
+    console.log('🗑️ Verwijderen van verhuur:', verhuurId);
+    
+    if (!confirm('Weet je zeker dat je deze verhuur wilt verwijderen?')) {
+        return;
+    }
+    
+    try {
+        const { data: verhuurData, error: fetchError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('fiets_id, eind_datum')
+            .eq('id', verhuurId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        const { error: deleteError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .delete()
+            .eq('id', verhuurId);
+        
+        if (deleteError) throw deleteError;
+        
+        if (verhuurData && !verhuurData.eind_datum && verhuurData.fiets_id) {
+            const { error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .update({ status: 'beschikbaar' })
+                .eq('id', verhuurData.fiets_id);
+            
+            if (fietsError) throw fietsError;
+        }
+        
+        showMessage('✅ Verhuur verwijderd!');
+        loadVerhuur();
+        loadFietsen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
 // STATISTIEKEN
 // ============================================
 
@@ -1089,12 +1492,19 @@ async function loadStats() {
             .from('klanten')
             .select('*', { count: 'exact', head: true });
         
+        const { count: verhuurCount } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('*', { count: 'exact', head: true })
+            .is('eind_datum', null);
+        
         const el1 = document.getElementById('stat-modellen');
         const el2 = document.getElementById('stat-fietsen');
         const el3 = document.getElementById('stat-klanten');
+        const el4 = document.getElementById('stat-verhuur');
         if (el1) el1.textContent = modellenCount || 0;
         if (el2) el2.textContent = fietsenCount || 0;
         if (el3) el3.textContent = klantenCount || 0;
+        if (el4) el4.textContent = verhuurCount || 0;
     } catch (error) {
         console.error('❌ Fout bij laden statistieken:', error);
     }
@@ -1374,6 +1784,13 @@ window.editKlant = editKlant;
 window.saveKlant = saveKlant;
 window.cancelEditKlant = cancelEditKlant;
 window.deleteKlant = deleteKlant;
+
+// Verhuur functies
+window.showAddVerhuurForm = showAddVerhuurForm;
+window.hideAddVerhuurForm = hideAddVerhuurForm;
+window.loadVerhuur = loadVerhuur;
+window.beëindigVerhuur = beëindigVerhuur;
+window.deleteVerhuur = deleteVerhuur;
 
 // QR-code functies
 window.showQRCode = showQRCode;
