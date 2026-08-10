@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panta Club - Fietsregistratie</title>
     
-    <!-- ============================================
-         EXTERNE CSS BESTANDEN
-         ============================================ -->
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Eigen CSS (apart bestand) -->
+    <!-- ============================================
+         EXTERNE CSS (aparte bestanden)
+         ============================================ -->
     <link rel="stylesheet" href="../src/assets/css/style.css">
     <link rel="stylesheet" href="../src/assets/css/components.css">
 </head>
@@ -27,7 +26,6 @@
                 <span>🚲 Panta Club</span>
             </div>
             
-            <!-- Hamburger menu (alleen zichtbaar op mobiel) -->
             <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
                 ☰
             </button>
@@ -47,7 +45,7 @@
          ============================================ -->
     <main id="main-content">
         <div class="container">
-            <!-- Dashboard wordt hier geladen via JavaScript -->
+            <!-- Dashboard wordt hier geladen -->
         </div>
     </main>
     
@@ -75,10 +73,10 @@
         // ============================================
         
         console.log('🚀 Panta Club Fietsregistratie gestart!');
-        console.log('📁 CSS wordt geladen uit aparte bestanden');
+        console.log('✅ CSS wordt geladen uit aparte bestanden');
         
         // ============================================
-        // PAGINA'S (dynamische content)
+        // PAGINA'S
         // ============================================
         
         const PAGES = {
@@ -209,7 +207,6 @@
             
             document.getElementById('main-content').innerHTML = content;
             
-            // Update navigatie
             document.querySelectorAll('.navbar-links a').forEach(link => {
                 link.classList.remove('active');
                 if (link.getAttribute('data-page') === page) {
@@ -217,7 +214,6 @@
                 }
             });
             
-            // Sluit mobiel menu na klik
             const navbarLinks = document.getElementById('navbarLinks');
             const menuToggle = document.getElementById('menuToggle');
             if (navbarLinks) {
@@ -252,12 +248,8 @@
                     e.stopPropagation();
                     navbarLinks.classList.toggle('open');
                     this.textContent = navbarLinks.classList.contains('open') ? '✕' : '☰';
-                    this.setAttribute('aria-label', 
-                        navbarLinks.classList.contains('open') ? 'Menu sluiten' : 'Menu openen'
-                    );
                 });
                 
-                // Sluit menu als er op een link wordt geklikt
                 navbarLinks.querySelectorAll('a').forEach(link => {
                     link.addEventListener('click', function() {
                         navbarLinks.classList.remove('open');
@@ -275,23 +267,14 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ DOM geladen!');
-            
-            // Start met dashboard
             navigateTo('dashboard');
-            
-            // Setup mobiel menu
             setupMobileMenu();
             
-            // Logout link
-            const logoutLink = document.getElementById('logout-link');
-            if (logoutLink) {
-                logoutLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    handleLogout();
-                });
-            }
+            document.getElementById('logout-link').addEventListener('click', function(e) {
+                e.preventDefault();
+                handleLogout();
+            });
             
-            // Navigatie links
             document.querySelectorAll('.navbar-links a[data-page]').forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -302,7 +285,6 @@
             console.log('✅ Applicatie klaar voor gebruik!');
         });
         
-        // Maak functies globaal beschikbaar
         window.navigateTo = navigateTo;
         window.showMessage = showMessage;
         window.handleLogout = handleLogout;

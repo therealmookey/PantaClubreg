@@ -2,7 +2,6 @@
    ALGEMENE STIJLEN - Panta Club Huisstijl
    ============================================ */
 
-/* ----- RESET & BASIS ----- */
 * {
     margin: 0;
     padding: 0;
@@ -17,7 +16,6 @@ body {
     min-height: 100vh;
 }
 
-/* ----- KLEUREN (Huisstijl Panta Club) ----- */
 :root {
     --primary-blue: #1A2B4C;
     --primary-blue-light: #2C4A7A;
@@ -32,28 +30,41 @@ body {
    CONTAINER - 80% BREEDTE
    ============================================ */
 .container {
-    max-width: 80%;        /* ← 80% breedte zoals gewenst */
-    margin: 0 auto;
-    padding: 0 20px;
+    max-width: 80% !important;
+    width: 80% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
 }
 
-/* Voor zeer kleine schermen: iets breder */
-@media (max-width: 480px) {
+/* Main element */
+main {
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
+}
+
+/* Responsive: op kleine schermen iets breder */
+@media (max-width: 768px) {
     .container {
-        max-width: 92%;
-        padding: 0 10px;
+        max-width: 92% !important;
+        width: 92% !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
     }
 }
 
-/* Voor grote schermen: maximale breedte beperken */
+/* Op grote schermen niet te breed */
 @media (min-width: 1400px) {
     .container {
-        max-width: 1200px;  /* Niet breder dan 1200px op grote schermen */
+        max-width: 1200px !important;
+        width: 1200px !important;
     }
 }
 
 /* ============================================
-   NAVIGATIE - RESPONSIVE
+   NAVIGATIE
    ============================================ */
 .navbar {
     background-color: var(--primary-blue);
@@ -65,11 +76,11 @@ body {
 }
 
 .navbar .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
 }
 
 .navbar-brand {
@@ -85,7 +96,6 @@ body {
     font-size: 1.3rem;
 }
 
-/* Navigatie links - Desktop */
 .navbar-links {
     display: flex;
     align-items: center;
@@ -112,7 +122,6 @@ body {
     border-bottom-color: var(--accent-orange);
 }
 
-/* ----- Hamburger menu knop (verborgen op desktop) ----- */
 .menu-toggle {
     display: none;
     background: none;
@@ -123,18 +132,9 @@ body {
     padding: 5px 10px;
 }
 
-/* ============================================
-   RESPONSIVE - TABLET & MOBIEL
-   ============================================ */
-
-/* Tablet en kleinere schermen */
 @media (max-width: 768px) {
     .menu-toggle {
         display: block;
-    }
-    
-    .navbar .container {
-        flex-wrap: wrap;
     }
     
     .navbar-links {
@@ -166,7 +166,7 @@ body {
 }
 
 /* ============================================
-   KNOMMEN - RESPONSIVE
+   KNOMMEN
    ============================================ */
 .btn {
     display: inline-block;
@@ -218,7 +218,6 @@ body {
     min-width: 120px;
 }
 
-/* Knoppen op mobiel */
 @media (max-width: 480px) {
     .btn {
         padding: 12px 20px;
@@ -232,7 +231,7 @@ body {
 }
 
 /* ============================================
-   CARDS - RESPONSIVE
+   CARDS
    ============================================ */
 .card {
     background: white;
@@ -255,7 +254,7 @@ body {
 }
 
 /* ============================================
-   HERO SECTIE - RESPONSIVE
+   HERO SECTIE
    ============================================ */
 .hero {
     text-align: center;
@@ -322,7 +321,7 @@ body {
 }
 
 /* ============================================
-   STATISTIEKEN - RESPONSIVE
+   STATISTIEKEN
    ============================================ */
 .stats {
     display: grid;
@@ -378,7 +377,7 @@ body {
 }
 
 /* ============================================
-   ACTIVITEITENLIJST - RESPONSIVE
+   ACTIVITEITENLIJST
    ============================================ */
 .activity-list {
     list-style: none;
@@ -415,30 +414,7 @@ body {
 }
 
 /* ============================================
-   GRID - RESPONSIVE
-   ============================================ */
-.grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin: 30px 0;
-}
-
-@media (max-width: 992px) {
-    .grid-3 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 576px) {
-    .grid-3 {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-}
-
-/* ============================================
-   FOOTER - RESPONSIVE
+   FOOTER
    ============================================ */
 .site-footer {
     background-color: var(--primary-blue);
@@ -469,7 +445,7 @@ body {
 }
 
 /* ============================================
-   FORMULIEREN - RESPONSIVE
+   FORMULIEREN
    ============================================ */
 .form-group {
     margin-bottom: 18px;
@@ -515,7 +491,7 @@ body {
 }
 
 /* ============================================
-   TABELLEN - RESPONSIVE
+   TABELLEN
    ============================================ */
 .table-responsive {
     overflow-x: auto;
