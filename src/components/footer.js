@@ -6,34 +6,33 @@
  * ============================================
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📌 Footer component laden...');
-    renderFooter();
-});
+console.log('📌 Footer component geladen');
 
 function renderFooter() {
     const footerElement = document.getElementById('footer');
-    if (!footerElement) return;
-    
-    const currentYear = new Date().getFullYear();
+    if (!footerElement) {
+        console.error('❌ #footer element niet gevonden!');
+        return;
+    }
     
     footerElement.innerHTML = `
-        <footer style="
-            background-color: var(--primary-blue);
-            color: rgba(255,255,255,0.7);
-            padding: 30px 0;
-            margin-top: 40px;
-            text-align: center;
-        ">
-            <div class="container">
+        <footer class="site-footer">
+            <div class="container-full">
                 <p style="margin-bottom: 5px;">
-                    © ${currentYear} <strong style="color: white;">Panta Club</strong> 
-                    - Fietsregistratie Platform v1.0
+                    &copy; ${new Date().getFullYear()} <strong>Panta Club</strong> 
+                    - Fietsregistratie Platform
                 </p>
                 <p style="font-size: 0.85rem; margin: 0;">
-                    Gebouwd met ❤️ voor een veilige en overzichtelijke fietsadministratie
+                    Gebouwd met &#10084; voor een veilige en overzichtelijke fietsadministratie
                 </p>
             </div>
         </footer>
     `;
+    
+    console.log('✅ Footer geladen');
 }
+
+// Maak functie globaal beschikbaar
+window.renderFooter = renderFooter;
+
+console.log('✅ Footer component klaar voor gebruik');

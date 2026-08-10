@@ -1,13 +1,57 @@
 /**
  * ============================================
- * HOOFDAPPLICATIE - MET FIETSEN FUNCTIONALITEIT
+ * HOOFDAPPLICATIE - MET MODELLEN EN FIETSEN
  * ============================================
  */
 
 console.log('🚀 Panta Club Fietsregistratie start...');
 
 // ============================================
-// PAGINA'S (dynamische content)
+// STARTUP - RENDER NAVIGATIE EN FOOTER
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM geladen');
+    
+    if (typeof window.renderNavigation === 'function') {
+        window.renderNavigation();
+    }
+    if (typeof window.renderFooter === 'function') {
+        window.renderFooter();
+    }
+    
+    console.log('🔍 Controleren van sessie...');
+    
+    if (typeof window.checkSession === 'function') {
+        window.checkSession().then(user => {
+            if (user) {
+                console.log('✅ Ingelogd als:', user.email);
+                window.currentUser = user;
+                if (typeof window.renderNavigation === 'function') {
+                    window.renderNavigation();
+                }
+                loadDashboard();
+            } else {
+                console.log('👤 Niet ingelogd, toon login pagina');
+                window.currentUser = null;
+                if (typeof window.renderNavigation === 'function') {
+                    window.renderNavigation();
+                }
+                if (typeof window.showLoginPage === 'function') {
+                    window.showLoginPage();
+                }
+            }
+        });
+    } else {
+        console.error('❌ Auth module niet geladen!');
+        if (typeof window.showLoginPage === 'function') {
+            window.showLoginPage();
+        }
+    }
+});
+
+// ============================================
+// PAGINA'S
 // ============================================
 
 const PAGES = {
@@ -15,19 +59,19 @@ const PAGES = {
         <div style="padding: 20px 0;">
             <h1>👋 Welkom bij Panta Club!</h1>
             <p style="color: #666; margin-bottom: 30px;">
-                Beheer hier jouw fietsen, klanten en onderhoud.
+                Beheer hier jouw fietsmodellen, individuele fietsen, klanten en onderhoud.
             </p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0;">
                 <div class="card" style="text-align: center;">
-                    <div style="font-size: 2.5rem; margin-bottom: 8px;">🚲</div>
-                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-fietsen">0</h3>
-                    <p style="color: #666; margin: 0;">Totaal fietsen</p>
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
+                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-modellen">0</h3>
+                    <p style="color: #666; margin: 0;">Fietsmodellen</p>
                 </div>
                 <div class="card" style="text-align: center;">
-                    <div style="font-size: 2.5rem; margin-bottom: 8px;">👤</div>
-                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-klanten">0</h3>
-                    <p style="color: #666; margin: 0;">Totaal klanten</p>
+                    <div style="font-size: 2.5rem; margin-bottom: 8px;">🚲</div>
+                    <h3 style="font-size: 1.8rem; margin: 0;" id="stat-fietsen">0</h3>
+                    <p style="color: #666; margin: 0;">Individuele fietsen</p>
                 </div>
                 <div class="card" style="text-align: center;">
                     <div style="font-size: 2.5rem; margin-bottom: 8px;">🔧</div>
@@ -39,10 +83,13 @@ const PAGES = {
             <div class="card">
                 <h3>📌 Snelle acties</h3>
                 <div class="btn-group" style="margin-top: 15px;">
-                    <button class="btn btn-primary" onclick="window.navigateTo('fietsen')">
-                        ➕ Fiets toevoegen
+                    <button class="btn btn-primary" onclick="window.navigateTo('modellen')">
+                        📦 Model toevoegen
                     </button>
-                    <button class="btn btn-accent" onclick="window.showMessage('Klanten pagina komt binnenkort!')">
+                    <button class="btn btn-accent" onclick="window.navigateTo('fietsen')">
+                        🚲 Fiets toevoegen
+                    </button>
+                    <button class="btn btn-outline" onclick="window.showMessage('Klanten pagina komt binnenkort!')">
                         👤 Klant toevoegen
                     </button>
                 </div>
@@ -50,36 +97,78 @@ const PAGES = {
         </div>
     `,
     
+    modellen: `
+        <div style="padding: 20px 0;">
+            <h1>📦 Fietsmodellen</h1>
+            <p style="color: #666; margin-bottom: 20px;">
+                Beheer hier de standaard fietsmodellen (merk, model, kleur). 
+                Dit zijn de <strong>"dozen"</strong> waar later individuele fietsen met serienummers aan worden gekoppeld.
+            </p>
+            
+            <button class="btn btn-primary" onclick="window.showAddModelForm()" style="margin-bottom: 20px;">
+                ➕ Nieuw model toevoegen
+            </button>
+            
+            <div id="addModelForm" style="display: none; margin-bottom: 30px;">
+                <div class="card">
+                    <h3>Nieuw fietsmodel toevoegen</h3>
+                    <form id="modelForm">
+                        <div class="form-group">
+                            <label for="modelMerk">Merk *</label>
+                            <input type="text" id="modelMerk" placeholder="Bijv. Panta" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modelNaam">Model *</label>
+                            <input type="text" id="modelNaam" placeholder="Bijv. Club 20" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="modelKleur">Kleur *</label>
+                            <input type="text" id="modelKleur" placeholder="Bijv. Rood" required>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="submit" class="btn btn-primary">💾 Opslaan</button>
+                            <button type="button" class="btn btn-outline" onclick="window.hideAddModelForm()">Annuleren</button>
+                        </div>
+                    </form>
+                    <div id="modelFormMessage" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+            
+            <div id="modellenLijst">
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📦</div>
+                    <h3>Laden van modellen...</h3>
+                </div>
+            </div>
+        </div>
+    `,
+    
     fietsen: `
         <div style="padding: 20px 0;">
-            <h1>🚲 Fietsen</h1>
-            <p style="color: #666; margin-bottom: 20px;">Beheer hier alle fietsen. Voeg nieuwe fietsen toe met serienummer en QR-code.</p>
+            <h1>🚲 Individuele fietsen</h1>
+            <p style="color: #666; margin-bottom: 20px;">
+                Beheer hier de individuele fietsen met serienummer. 
+                Elke fiets is gekoppeld aan een model uit de <strong>"Fietsmodellen"</strong> lijst.
+                Dit zijn de <strong>"schoenen"</strong> die in de dozen passen.
+            </p>
             
-            <!-- Knop om nieuwe fiets toe te voegen -->
-            <button class="btn btn-primary" onclick="window.showAddFietsForm()" style="margin-bottom: 20px;">
+            <button class="btn btn-accent" onclick="window.showAddFietsForm()" style="margin-bottom: 20px;">
                 ➕ Nieuwe fiets toevoegen
             </button>
             
-            <!-- Formulier voor nieuwe fiets (standaard verborgen) -->
             <div id="addFietsForm" style="display: none; margin-bottom: 30px;">
                 <div class="card">
                     <h3>Nieuwe fiets registreren</h3>
                     <form id="fietsForm">
                         <div class="form-group">
                             <label for="fietsSerienummer">Serienummer *</label>
-                            <input type="text" id="fietsSerienummer" placeholder="Bijv. ABC123456" required>
+                            <input type="text" id="fietsSerienummer" placeholder="Bijv. PNT-2024-001" required>
                         </div>
                         <div class="form-group">
-                            <label for="fietsMerk">Merk</label>
-                            <input type="text" id="fietsMerk" placeholder="Bijv. Panta">
-                        </div>
-                        <div class="form-group">
-                            <label for="fietsModel">Model</label>
-                            <input type="text" id="fietsModel" placeholder="Bijv. Club 20">
-                        </div>
-                        <div class="form-group">
-                            <label for="fietsKleur">Kleur</label>
-                            <input type="text" id="fietsKleur" placeholder="Bijv. Rood">
+                            <label for="fietsModelSelect">Model (merk + model + kleur) *</label>
+                            <select id="fietsModelSelect" required>
+                                <option value="">-- Selecteer een model --</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="fietsStatus">Status</label>
@@ -90,7 +179,7 @@ const PAGES = {
                             </select>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="submit" class="btn btn-primary">💾 Opslaan</button>
+                            <button type="submit" class="btn btn-accent">💾 Opslaan</button>
                             <button type="button" class="btn btn-outline" onclick="window.hideAddFietsForm()">Annuleren</button>
                         </div>
                     </form>
@@ -98,7 +187,6 @@ const PAGES = {
                 </div>
             </div>
             
-            <!-- Overzicht van fietsen -->
             <div id="fietsenLijst">
                 <div class="card" style="text-align: center; padding: 40px;">
                     <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
@@ -134,7 +222,7 @@ const PAGES = {
 };
 
 // ============================================
-// NAVIGATIE FUNCTIE
+// NAVIGATIE
 // ============================================
 
 function navigateTo(page) {
@@ -150,25 +238,13 @@ function navigateTo(page) {
         wrapper.innerHTML = content;
     }
     
-    // Update navigatie active state
-    document.querySelectorAll('.navbar-links a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-page') === page) {
-            link.classList.add('active');
-        }
-    });
-    
-    // Sluit mobiel menu
-    const navbarLinks = document.getElementById('navbarLinks');
-    const menuToggle = document.getElementById('menuToggle');
-    if (navbarLinks) {
-        navbarLinks.classList.remove('open');
-    }
-    if (menuToggle) {
-        menuToggle.textContent = '☰';
+    if (typeof window.setActiveNavItem === 'function') {
+        window.setActiveNavItem(page);
     }
     
-    // Laad data als we naar fietsen gaan
+    if (page === 'modellen') {
+        setTimeout(loadModellen, 100);
+    }
     if (page === 'fietsen') {
         setTimeout(loadFietsen, 100);
     }
@@ -178,23 +254,163 @@ function navigateTo(page) {
 }
 
 // ============================================
-// FIETSEN FUNCTIES
+// LOGOUT
 // ============================================
 
-/**
- * Toont het formulier voor het toevoegen van een fiets
- */
-function showAddFietsForm() {
-    const form = document.getElementById('addFietsForm');
+async function handleLogout() {
+    console.log('🚪 Uitloggen...');
+    if (confirm('Weet je zeker dat je wilt uitloggen?')) {
+        if (typeof window.logoutUser === 'function') {
+            const result = await window.logoutUser();
+            if (result.success) {
+                window.currentUser = null;
+                if (typeof window.renderNavigation === 'function') {
+                    window.renderNavigation();
+                }
+                if (typeof window.showLoginPage === 'function') {
+                    window.showLoginPage();
+                }
+                showMessage('👋 Je bent uitgelogd.');
+            }
+        }
+    }
+}
+
+window.handleLogout = handleLogout;
+
+// ============================================
+// MODEL FUNCTIES
+// ============================================
+
+function showAddModelForm() {
+    const form = document.getElementById('addModelForm');
     if (form) {
         form.style.display = 'block';
         form.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
-/**
- * Verbergt het formulier voor het toevoegen van een fiets
- */
+function hideAddModelForm() {
+    const form = document.getElementById('addModelForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+    const message = document.getElementById('modelFormMessage');
+    if (message) {
+        message.innerHTML = '';
+    }
+}
+
+async function loadModellen() {
+    console.log('📥 Laden van modellen...');
+    const lijst = document.getElementById('modellenLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('fiets_modellen')
+            .select('*')
+            .order('merk', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📦</div>
+                    <h3>Geen modellen gevonden</h3>
+                    <p style="color: #999;">Voeg je eerste model toe met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `<div class="table-responsive"><table><thead><tr><th>Merk</th><th>Model</th><th>Kleur</th><th>Acties</th></tr></thead><tbody>`;
+        
+        data.forEach(model => {
+            html += `
+                <tr>
+                    <td><strong>${model.merk}</strong></td>
+                    <td>${model.model}</td>
+                    <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${model.kleur.toLowerCase()};border:1px solid #ddd;"></span> ${model.kleur}</td>
+                    <td><button class="btn btn-sm btn-outline" onclick="window.showMessage('Detail van ${model.merk} ${model.model} komt binnenkort!')">📋 Detail</button></td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table></div><p style="color:#999;font-size:0.85rem;margin-top:10px;">Totaal: ${data.length} modellen</p>`;
+        lijst.innerHTML = html;
+    } catch (error) {
+        console.error('❌ Fout:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
+    }
+}
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'modelForm') {
+        event.preventDefault();
+        await handleModelSubmit(event);
+    }
+});
+
+async function handleModelSubmit(event) {
+    const merk = document.getElementById('modelMerk').value.trim();
+    const model = document.getElementById('modelNaam').value.trim();
+    const kleur = document.getElementById('modelKleur').value.trim();
+    const messageDiv = document.getElementById('modelFormMessage');
+    const button = event.target.querySelector('button[type="submit"]');
+    const originalText = button.textContent;
+    
+    if (!merk || !model || !kleur) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Alle velden zijn verplicht!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('fiets_modellen')
+            .insert([{ merk, model, kleur }]);
+        
+        if (error) throw error;
+        
+        messageDiv.innerHTML = `<p style="color: #28a745;">✅ Model ${merk} - ${model} (${kleur}) toegevoegd!</p>`;
+        document.getElementById('modelForm').reset();
+        
+        setTimeout(() => {
+            hideAddModelForm();
+            loadModellen();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
+// FIETS FUNCTIES
+// ============================================
+
+function showAddFietsForm() {
+    const form = document.getElementById('addFietsForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+        loadModelSelectOptions();
+    }
+}
+
 function hideAddFietsForm() {
     const form = document.getElementById('addFietsForm');
     if (form) {
@@ -206,44 +422,47 @@ function hideAddFietsForm() {
     }
 }
 
-/**
- * Laadt alle fietsen uit de database
- */
+async function loadModelSelectOptions() {
+    const select = document.getElementById('fietsModelSelect');
+    if (!select) return;
+    
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('fiets_modellen')
+            .select('*')
+            .order('merk', { ascending: true });
+        
+        if (error) throw error;
+        
+        select.innerHTML = '<option value="">-- Selecteer een model --</option>';
+        data.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = `${model.merk} - ${model.model} (${model.kleur})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('❌ Fout bij laden modellen:', error);
+    }
+}
+
 async function loadFietsen() {
     console.log('📥 Laden van fietsen...');
-    
     const lijst = document.getElementById('fietsenLijst');
     if (!lijst) return;
     
     try {
-        // Controleer of supabaseClient bestaat
         if (!window.supabaseClient) {
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px; border: 2px solid #dc3545;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">❌</div>
-                    <h3>Geen verbinding</h3>
-                    <p style="color: #999;">Supabase client is niet geïnitialiseerd.</p>
-                </div>
-            `;
+            lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>`;
             return;
         }
         
         const { data, error } = await window.supabaseClient
-            .from('fietsen')
-            .select('*')
+            .from('individuele_fietsen')
+            .select(`*, fiets_modellen (merk, model, kleur)`)
             .order('aangemaakt_op', { ascending: false });
         
-        if (error) {
-            console.error('❌ Fout bij laden fietsen:', error);
-            lijst.innerHTML = `
-                <div class="card" style="text-align: center; padding: 40px; border: 2px solid #dc3545;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">❌</div>
-                    <h3>Fout bij laden</h3>
-                    <p style="color: #999;">${error.message}</p>
-                </div>
-            `;
-            return;
-        }
+        if (error) throw error;
         
         if (!data || data.length === 0) {
             lijst.innerHTML = `
@@ -256,72 +475,32 @@ async function loadFietsen() {
             return;
         }
         
-        // Toon de fietsen in een tabel
-        let html = `
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Serienummer</th>
-                            <th>Merk</th>
-                            <th>Model</th>
-                            <th>Kleur</th>
-                            <th>Status</th>
-                            <th>Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        let html = `<div class="table-responsive"><table><thead><tr><th>Serienummer</th><th>Model</th><th>Kleur</th><th>Status</th><th>QR</th></tr></thead><tbody>`;
         
         data.forEach(fiets => {
             const statusClass = fiets.status === 'beschikbaar' ? 'badge-available' :
-                               fiets.status === 'verhuurd' ? 'badge-rented' :
-                               'badge-maintenance';
+                               fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
+            const modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
             
             html += `
                 <tr>
                     <td><strong>${fiets.serienummer}</strong></td>
-                    <td>${fiets.merk || '-'}</td>
-                    <td>${fiets.model || '-'}</td>
-                    <td>${fiets.kleur || '-'}</td>
+                    <td>${modelInfo.merk} ${modelInfo.model}</td>
+                    <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;"></span> ${modelInfo.kleur}</td>
                     <td><span class="badge ${statusClass}">${fiets.status}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline" onclick="window.showFietsDetail('${fiets.id}')">
-                            📋 Detail
-                        </button>
-                    </td>
+                    <td>${fiets.qr_code ? '✅' : '❌'}</td>
                 </tr>
             `;
         });
         
-        html += `
-                    </tbody>
-                </table>
-            </div>
-            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
-                Totaal: ${data.length} fietsen
-            </p>
-        `;
-        
+        html += `</tbody></table></div><p style="color:#999;font-size:0.85rem;margin-top:10px;">Totaal: ${data.length} fietsen</p>`;
         lijst.innerHTML = html;
-        
     } catch (error) {
-        console.error('❌ Onverwachte fout bij laden fietsen:', error);
-        lijst.innerHTML = `
-            <div class="card" style="text-align: center; padding: 40px; border: 2px solid #dc3545;">
-                <div style="font-size: 3rem; margin-bottom: 10px;">❌</div>
-                <h3>Fout bij laden</h3>
-                <p style="color: #999;">Er is een fout opgetreden.</p>
-            </div>
-        `;
+        console.error('❌ Fout:', error);
+        lijst.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>`;
     }
 }
 
-// ============================================
-// FIETS TOEVOEGEN FORMULIER
-// ============================================
-
-// Event listener voor het fiets formulier
 document.addEventListener('submit', async function(event) {
     if (event.target.id === 'fietsForm') {
         event.preventDefault();
@@ -329,170 +508,19 @@ document.addEventListener('submit', async function(event) {
     }
 });
 
-/**
- * Handelt het toevoegen van een fiets af
- */
 async function handleFietsSubmit(event) {
-    console.log('📝 Fiets formulier ingediend');
-    
     const serienummer = document.getElementById('fietsSerienummer').value.trim();
-    const merk = document.getElementById('fietsMerk').value.trim();
-    const model = document.getElementById('fietsModel').value.trim();
-    const kleur = document.getElementById('fietsKleur').value.trim();
+    const modelId = document.getElementById('fietsModelSelect').value;
     const status = document.getElementById('fietsStatus').value;
-    
     const messageDiv = document.getElementById('fietsFormMessage');
     const button = event.target.querySelector('button[type="submit"]');
     const originalText = button.textContent;
     
-    // Validatie
-    if (!serienummer) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Serienummer is verplicht!</p>';
+    if (!serienummer || !modelId) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Serienummer en model zijn verplicht!</p>';
         return;
     }
     
-    // Controleer of supabaseClient bestaat
-    if (!window.supabaseClient) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Geen verbinding met de database.</p>';
-        return;
-    }
-    
-    // Toon loading state
     button.textContent = '⏳ Bezig...';
     button.disabled = true;
-    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
-    
-    try {
-        // Genereer QR-code URL
-        const qrCode = `https://therealmookey.github.io/PantaClubreg/fiets/${serienummer}`;
-        
-        // Sla op in Supabase
-        const { data, error } = await window.supabaseClient
-            .from('fietsen')
-            .insert([
-                {
-                    serienummer: serienummer,
-                    merk: merk || null,
-                    model: model || null,
-                    kleur: kleur || null,
-                    status: status,
-                    qr_code: qrCode
-                }
-            ])
-            .select();
-        
-        if (error) {
-            console.error('❌ Fout bij opslaan:', error);
-            messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Fout: ${error.message}</p>`;
-            button.textContent = originalText;
-            button.disabled = false;
-            return;
-        }
-        
-        console.log('✅ Fiets opgeslagen:', data);
-        messageDiv.innerHTML = `<p style="color: #28a745;">✅ Fiets ${serienummer} succesvol toegevoegd!</p>`;
-        
-        // Reset formulier
-        document.getElementById('fietsForm').reset();
-        
-        // Verberg formulier na 2 seconden en herlaad lijst
-        setTimeout(() => {
-            hideAddFietsForm();
-            loadFietsen();
-            loadStats();
-        }, 2000);
-        
-    } catch (error) {
-        console.error('❌ Onverwachte fout:', error);
-        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Er is een fout opgetreden.</p>`;
-    } finally {
-        button.textContent = originalText;
-        button.disabled = false;
-    }
-}
-
-// ============================================
-// STATISTIEKEN
-// ============================================
-
-async function loadStats() {
-    try {
-        if (!window.supabaseClient) return;
-        
-        const { count: fietsenCount, error: fietsError } = await window.supabaseClient
-            .from('fietsen')
-            .select('*', { count: 'exact', head: true });
-        
-        if (!fietsError) {
-            const el = document.getElementById('stat-fietsen');
-            if (el) el.textContent = fietsenCount || 0;
-        }
-    } catch (error) {
-        console.error('❌ Fout bij laden statistieken:', error);
-    }
-}
-
-// ============================================
-// HULPFUNCTIES
-// ============================================
-
-function showMessage(message) {
-    alert('📢 ' + message);
-}
-
-function showFietsDetail(id) {
-    showMessage('Detail van fiets ' + id + ' komt binnenkort!');
-}
-
-// ============================================
-// DASHBOARD LADEN (aangeroepen door auth.js)
-// ============================================
-
-function loadDashboard() {
-    console.log('📊 Dashboard laden...');
-    navigateTo('dashboard');
-}
-
-// ============================================
-// STARTUP - SESSIE CONTROLE
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOM geladen');
-    console.log('🔍 Controleren van sessie...');
-    
-    // Check of er een actieve sessie is via auth.js
-    if (typeof window.checkSession === 'function') {
-        window.checkSession().then(user => {
-            if (user) {
-                console.log('✅ Ingelogd als:', user.email);
-                loadDashboard();
-            } else {
-                console.log('👤 Niet ingelogd, toon login pagina');
-                if (typeof window.showLoginPage === 'function') {
-                    window.showLoginPage();
-                }
-            }
-        });
-    } else {
-        console.error('❌ Auth module niet geladen!');
-        if (typeof window.showLoginPage === 'function') {
-            window.showLoginPage();
-        }
-    }
-});
-
-// ============================================
-// EXPORTEER FUNCTIES
-// ============================================
-
-window.navigateTo = navigateTo;
-window.showMessage = showMessage;
-window.showAddFietsForm = showAddFietsForm;
-window.hideAddFietsForm = hideAddFietsForm;
-window.loadFietsen = loadFietsen;
-window.loadStats = loadStats;
-window.showFietsDetail = showFietsDetail;
-window.loadDashboard = loadDashboard;
-
-console.log('✅ Applicatie klaar voor gebruik');
+    messageDiv.innerHTML =
