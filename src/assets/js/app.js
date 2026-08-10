@@ -1270,59 +1270,55 @@ function processFietsExcelFile(file) {
             
             const sheetNames = workbook.SheetNames;
             
-            // Kijk of er een tabblad "stocklijst" is
-            let stockSheetExists = sheetNames.includes('stocklijst');
             let sheetName = sheetNames[0];
-            
-            if (stockSheetExists) {
+            if (sheetNames.includes('stocklijst')) {
                 sheetName = 'stocklijst';
                 console.log('✅ Tabblad "stocklijst" gevonden, gebruiken deze.');
-            } else if (sheetNames.length > 1) {
-                // Als er meerdere tabbladen zijn maar geen stocklijst, toon keuze
-                const userChoice = confirm(
-                    `Er zijn ${sheetNames.length} tabbladen gevonden:\n\n` +
-                    sheetNames.map((name, i) => `${i+1}. ${name}`).join('\n') +
-                    `\n\nWil je het eerste tabblad ("${sheetNames[0]}") gebruiken?\n` +
-                    `Klik "OK" voor "${sheetNames[0]}" of "Annuleren" om te kiezen.`
-                );
-                
-                if (!userChoice) {
-                    const choice = prompt(
-                        `Welk tabblad wil je gebruiken?\n\n` +
-                        sheetNames.map((name, i) => `${i+1}. ${name}`).join('\n') +
-                        `\n\nVoer het nummer in (1-${sheetNames.length}):`,
-                        '1'
-                    );
-                    
-                    if (choice) {
-                        const index = parseInt(choice) - 1;
-                        if (index >= 0 && index < sheetNames.length) {
-                            sheetName = sheetNames[index];
-                        }
-                    }
-                }
             } else {
-                sheetName = sheetNames[0];
-                console.log('ℹ️ Slechts 1 tabblad gevonden:', sheetName);
+                console.log('ℹ️ Gebruik tabblad:', sheetName);
             }
             
-            console.log('📋 Gebruik tabblad:', sheetName);
-            
             const sheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(sheet);
+            const rawData = XLSX.utils.sheet_to_json(sheet);
             
-            if (!jsonData || jsonData.length === 0) {
+            if (!rawData || rawData.length === 0) {
                 statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Geen data gevonden in tabblad "${sheetName}".</p>`;
                 return;
             }
             
-            fietsExcelHeaders = Object.keys(jsonData[0]);
-            fietsExcelData = jsonData;
+            // ============================================
+            // KOLOMNAMEN SCHOONMAKEN
+            // ============================================
+            const cleanData = rawData.map(row => {
+                const cleanRow = {};
+                for (const [key, value] of Object.entries(row)) {
+                    // Verwijder spaties, rare tekens, en maak de naam schoon
+                    let cleanKey = key
+                        .trim()
+                        .replace(/\s+/g, ' ')  // Meerdere spaties naar 1
+                        .replace(/[^\w\s]/g, '') // Verwijder speciale tekens
+                        .trim();
+                    
+                    // Als de key leeg is, gebruik de originele
+                    if (!cleanKey) cleanKey = key.trim();
+                    
+                    cleanRow[cleanKey] = value;
+                }
+                return cleanRow;
+            });
             
-            showFietsExcelPreview(jsonData, sheetName);
+            // Bewaar de schone kolomnamen
+            fietsExcelHeaders = Object.keys(cleanData[0] || {});
+            fietsExcelData = cleanData;
+            
+            console.log('📋 Originele kolommen:', Object.keys(rawData[0] || {}));
+            console.log('📋 Schoongemaakte kolommen:', fietsExcelHeaders);
+            console.log('📋 Eerste rij data:', cleanData[0]);
+            
+            showFietsExcelPreview(cleanData, sheetName);
             
             statusDiv.innerHTML = `
-                <p style="color: #28a745;">✅ ${jsonData.length} fietsen gevonden in tabblad "${sheetName}".</p>
+                <p style="color: #28a745;">✅ ${cleanData.length} fietsen gevonden in tabblad "${sheetName}".</p>
                 <p style="color: #666; font-size:0.85rem;">Kolommen: ${fietsExcelHeaders.join(', ')}</p>
             `;
             
@@ -1380,8 +1376,7 @@ async function importFietsExcelData() {
     const statusDiv = document.getElementById('fietsExcelImportStatus');
     const importBtn = document.getElementById('fietsExcelImportBtn');
     
-    // Toon welke kolommen er zijn gevonden
-    console.log('📋 Gevonden kolommen:', fietsExcelHeaders);
+    console.log('📋 Kolommen voor import:', fietsExcelHeaders);
     
     if (!confirm(`Weet je zeker dat je ${fietsExcelData.length} fietsen wilt importeren?`)) {
         return;
@@ -1422,13 +1417,17 @@ async function importFietsExcelData() {
             const row = fietsExcelData[i];
             
             // ============================================
-            // 1. SERIENUMMER - Zoek in meerdere mogelijke kolommen
+            // 1. SERIENUMMER - Zoek in de schone kolom
             // ============================================
-            const serienummer = findValue(row, [
-                'Serienummer', 'serienummer', 'SERIENUMMER',
-                'Serie nummer', 'serie nummer',
-                'Nummer', 'nummer', 'NR', 'Nr'
-            ]);
+            let serienummer = null;
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('serienummer') || key.toLowerCase().includes('serie')) {
+                    if (value && value !== '') {
+                        serienummer = String(value).trim();
+                        break;
+                    }
+                }
+            }
             
             if (!serienummer) {
                 errorCount++;
@@ -1443,81 +1442,80 @@ async function importFietsExcelData() {
             }
             
             // ============================================
-            // 2. TYPE/MODEL - Zoek in meerdere mogelijke kolommen
+            // 2. TYPE/MODEL
             // ============================================
-            const type = findValue(row, [
-                'Type', 'type', 'TYPE',
-                'Model', 'model', 'MODEL',
-                'Fiets type', 'fiets type',
-                'Product', 'product', 'PRODUCT'
-            ]);
-            
-            // 3. KLEUR - Zoek in meerdere mogelijke kolommen
-            const kleur = findValue(row, [
-                'Kleur', 'kleur', 'KLEUR',
-                'Color', 'color', 'COLOR',
-                'Kleur (nl)', 'kleur (nl)'
-            ]);
-            
-            // 4. MERK - Zoek in meerdere mogelijke kolommen (met fallback)
-            let merk = findValue(row, [
-                'Merk', 'merk', 'MERK',
-                'Brand', 'brand', 'BRAND'
-            ]);
-            
-            // Als geen merk gevonden, gebruik 'WOOM' als default
-            if (!merk) {
-                // Probeer merk uit type te halen (bijv. "WOOM 2" -> "WOOM")
-                if (type) {
-                    const typeParts = type.split(' ');
-                    if (typeParts.length > 0 && typeParts[0].length > 0) {
-                        merk = typeParts[0];
-                    } else {
-                        merk = 'WOOM';
+            let type = null;
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('type') || key.toLowerCase().includes('model')) {
+                    if (value && value !== '') {
+                        type = String(value).trim();
+                        break;
                     }
-                } else {
-                    merk = 'WOOM';
                 }
             }
             
             // ============================================
-            // 5. MODEL ID - Zoek of maak model aan
+            // 3. KLEUR
+            // ============================================
+            let kleur = null;
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('kleur') || key.toLowerCase().includes('color')) {
+                    if (value && value !== '') {
+                        kleur = String(value).trim();
+                        break;
+                    }
+                }
+            }
+            
+            // ============================================
+            // 4. MERK
+            // ============================================
+            let merk = 'WOOM';
+            // Probeer merk uit type te halen (bijv. "WOOM 2" -> "WOOM")
+            if (type) {
+                const typeParts = type.split(' ');
+                if (typeParts.length > 0 && typeParts[0].length > 0) {
+                    merk = typeParts[0];
+                }
+            }
+            
+            // ============================================
+            // 5. MODEL ID
             // ============================================
             let modelId = null;
-            let modelMatch = null;
             
             if (type) {
-                // Zoek exacte match op merk + model + kleur
-                modelMatch = bestaandeModellen.find(m => 
+                // Zoek exacte match
+                const modelMatch = bestaandeModellen.find(m => 
                     m.merk.toLowerCase() === merk.toLowerCase() && 
                     m.model.toLowerCase() === type.toLowerCase() && 
                     (kleur ? m.kleur.toLowerCase() === kleur.toLowerCase() : true)
                 );
-            }
-            
-            if (modelMatch) {
-                modelId = modelMatch.id;
-                matchedModels.push(`${merk} - ${type} (${kleur || 'Onbekend'})`);
-            } else if (type) {
-                // Geen match gevonden, maak nieuw model aan
-                const modelKleur = kleur || 'Onbekend';
-                const { data: newModel, error: newModelError } = await window.supabaseClient
-                    .from('fiets_modellen')
-                    .insert([{ 
-                        merk: merk, 
-                        model: type, 
-                        kleur: modelKleur
-                    }])
-                    .select();
                 
-                if (newModelError) {
-                    errorCount++;
-                    errors.push(`Rij ${i + 1}: Fout bij aanmaken model: ${newModelError.message}`);
-                    console.error('❌ Fout bij aanmaken model:', newModelError);
-                    continue;
+                if (modelMatch) {
+                    modelId = modelMatch.id;
+                    matchedModels.push(`${merk} - ${type} (${kleur || 'Onbekend'})`);
+                } else {
+                    // Maak nieuw model aan
+                    const modelKleur = kleur || 'Onbekend';
+                    const { data: newModel, error: newModelError } = await window.supabaseClient
+                        .from('fiets_modellen')
+                        .insert([{ 
+                            merk: merk, 
+                            model: type, 
+                            kleur: modelKleur
+                        }])
+                        .select();
+                    
+                    if (newModelError) {
+                        errorCount++;
+                        errors.push(`Rij ${i + 1}: Fout bij aanmaken model: ${newModelError.message}`);
+                        console.error('❌ Fout bij aanmaken model:', newModelError);
+                        continue;
+                    }
+                    modelId = newModel[0].id;
+                    newModels.push(`${merk} - ${type} (${modelKleur})');
                 }
-                modelId = newModel[0].id;
-                newModels.push(`${merk} - ${type} (${modelKleur})`);
             } else {
                 errorCount++;
                 errors.push(`Rij ${i + 1}: Geen type/model gevonden`);
@@ -1527,7 +1525,16 @@ async function importFietsExcelData() {
             // ============================================
             // 6. STATUS
             // ============================================
-            const statusRaw = String(findValue(row, ['Status', 'status', 'STATUS', 'Conditie', 'conditie']) || '').toLowerCase();
+            let statusRaw = '';
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('status') || key.toLowerCase().includes('conditie')) {
+                    if (value && value !== '') {
+                        statusRaw = String(value).toLowerCase().trim();
+                        break;
+                    }
+                }
+            }
+            
             let fietsStatus = 'beschikbaar';
             if (statusRaw.includes('verhuurd') || statusRaw.includes('huur')) {
                 fietsStatus = 'verhuurd';
@@ -1539,7 +1546,16 @@ async function importFietsExcelData() {
             // 7. KLANT KOPPELING
             // ============================================
             let klantId = null;
-            const klantNaam = findValue(row, ['Klant', 'klant', 'KLANT', 'Klantnaam', 'klantnaam']);
+            let klantNaam = null;
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('klant')) {
+                    if (value && value !== '') {
+                        klantNaam = String(value).trim();
+                        break;
+                    }
+                }
+            }
+            
             if (klantNaam) {
                 const klantMatch = alleKlanten.find(k => 
                     k.naam.toLowerCase().includes(klantNaam.toLowerCase()) ||
@@ -1553,8 +1569,27 @@ async function importFietsExcelData() {
             // ============================================
             // 8. NOTITIES
             // ============================================
-            let notities = findValue(row, ['Notities', 'notities', 'NOTITIES', 'Opmerkingen', 'opmerkingen']) || '';
-            const oorsprongSerie = findValue(row, ['Oorsprong Serienr.', 'Oorsprong Serienummer', 'oorsprong serienr.']);
+            let notities = '';
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('notitie') || key.toLowerCase().includes('opmerking')) {
+                    if (value && value !== '') {
+                        notities = String(value).trim();
+                        break;
+                    }
+                }
+            }
+            
+            // Oorsprong Serienr.
+            let oorsprongSerie = '';
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('oorsprong') && key.toLowerCase().includes('serie')) {
+                    if (value && value !== '') {
+                        oorsprongSerie = String(value).trim();
+                        break;
+                    }
+                }
+            }
+            
             if (oorsprongSerie) {
                 notities = notities ? `${notities} | Oorsprong: ${oorsprongSerie}` : `Oorsprong: ${oorsprongSerie}`;
             }
@@ -1563,14 +1598,18 @@ async function importFietsExcelData() {
             // 9. AANKOOP DATUM
             // ============================================
             let aankoopDatum = null;
-            const aankoopDatumRaw = findValue(row, ['Aangekocht', 'aangekocht', 'Aankoopdatum', 'aankoopdatum', 'Datum', 'datum']);
-            if (aankoopDatumRaw) {
-                try {
-                    const datum = new Date(aankoopDatumRaw);
-                    if (!isNaN(datum)) {
-                        aankoopDatum = datum.toISOString().split('T')[0];
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes('aangekocht') || key.toLowerCase().includes('aankoop') || key.toLowerCase().includes('datum')) {
+                    if (value && value !== '') {
+                        try {
+                            const datum = new Date(value);
+                            if (!isNaN(datum)) {
+                                aankoopDatum = datum.toISOString().split('T')[0];
+                            }
+                        } catch (e) {}
+                        break;
                     }
-                } catch (e) {}
+                }
             }
             
             // ============================================
