@@ -13,22 +13,51 @@ console.log('🔐 Authenticatie module geladen');
 // SUPABASE INITIALISATIE
 // ============================================
 
-// Haal de configuratie op (LET OP: SUPABASE_CONFIG, niet CONFIG!)
+// Haal de configuratie op
 const supabaseConfig = window.SUPABASE_CONFIG;
 
 if (!supabaseConfig || !supabaseConfig.URL || !supabaseConfig.ANON_KEY) {
     console.error('❌ Supabase configuratie niet gevonden!');
     console.error('Controleer of config.js bestaat en de juiste gegevens bevat.');
+    console.error('Huidige config:', supabaseConfig);
 } else {
     console.log('✅ Supabase configuratie gevonden');
     console.log('📍 URL:', supabaseConfig.URL);
 }
 
+// ============================================
+// MAAK SUPABASE CLIENT AAN
+// ============================================
+
+// Controleer of de Supabase library is geladen
+if (typeof supabase === 'undefined' && typeof window.supabase === 'undefined') {
+    console.error('❌ Supabase library niet geladen!');
+    console.error('Controleer of de Supabase CDN is toegevoegd in index.html');
+} else {
+    console.log('✅ Supabase library is geladen');
+}
+
 // Maak de Supabase client aan (globaal beschikbaar)
-const supabaseClient = supabase.createClient(
-    supabaseConfig.URL,
-    supabaseConfig.ANON_KEY
-);
+let supabaseClient = null;
+
+try {
+    // Gebruik window.supabase of de globale supabase
+    const supabaseLib = window.supabase || supabase;
+    
+    if (supabaseLib && supabaseLib.createClient) {
+        supabaseClient = supabaseLib.createClient(
+            supabaseConfig.URL,
+            supabaseConfig.ANON_KEY
+        );
+        console.log('✅ Supabase client aangemaakt');
+    } else {
+        console.error('❌ Kan geen Supabase client aanmaken: createClient niet gevonden');
+    }
+} catch (error) {
+    console.error('❌ Fout bij aanmaken Supabase client:', error);
+}
+
+// Sla de client op in window voor globale toegang
 window.supabaseClient = supabaseClient;
 
 // ============================================
@@ -50,6 +79,12 @@ window.currentUser = currentUser;
  */
 async function loginUser(email, password) {
     console.log('🔑 Inlogpoging voor:', email);
+    
+    // Controleer of de client bestaat
+    if (!window.supabaseClient) {
+        console.error('❌ Supabase client niet geïnitialiseerd!');
+        return { success: false, error: 'Systeemfout: probeer de pagina te herladen.' };
+    }
     
     try {
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({
@@ -91,6 +126,11 @@ async function loginUser(email, password) {
  */
 async function logoutUser() {
     console.log('🚪 Uitloggen...');
+    
+    if (!window.supabaseClient) {
+        console.error('❌ Supabase client niet geïnitialiseerd!');
+        return { success: false, error: 'Systeemfout' };
+    }
     
     try {
         const { error } = await window.supabaseClient.auth.signOut();

@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panta Club - Fietsregistratie</title>
     
-    <!-- Google Fonts -->
+    <!-- ============================================
+         GOOGLE FONTS
+         ============================================ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <!-- ============================================
-         EXTERNE CSS
+         SUPABASE CLIENT (EERST LADEN!)
+         ============================================ -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- ============================================
+         CSS
          ============================================ -->
     <link rel="stylesheet" href="../src/assets/css/style.css">
     <link rel="stylesheet" href="../src/assets/css/components.css">
@@ -26,6 +33,7 @@
                 <span>🚲 Panta Club</span>
             </div>
             
+            <!-- Hamburger menu knop (alleen zichtbaar op mobiel) -->
             <button class="menu-toggle" id="menuToggle" aria-label="Menu openen">
                 ☰
             </button>
@@ -41,12 +49,11 @@
     </nav>
     
     <!-- ============================================
-         MAIN CONTENT - MET VASTE CONTAINER
+         MAIN CONTENT - 80% BREEDTE
          ============================================ -->
     <main id="main-content">
-        <!-- Deze div blijft ALTIJD bestaan met de container class -->
         <div class="container" id="content-wrapper">
-            <!-- Inhoud wordt hier geladen -->
+            <!-- Inhoud wordt hier dynamisch geladen via JavaScript -->
         </div>
     </main>
     
@@ -66,264 +73,16 @@
     </footer>
     
     <!-- ============================================
-         JAVASCRIPT
+         JAVASCRIPT - LET OP DE VOLGORDE!
          ============================================ -->
-    <script>
-        // ============================================
-        // HOOFDAPPLICATIE
-        // ============================================
-        
-        console.log('🚀 Panta Club Fietsregistratie gestart!');
-        console.log('📐 Navigatie en footer: 100% breed');
-        console.log('📐 Main content: 80% breed (via container class)');
-        
-        // ============================================
-        // PAGINA'S (zonder container - die blijft behouden)
-        // ============================================
-        
-        const PAGES = {
-            dashboard: `
-                <div class="hero">
-                    <span class="emoji-big">🚲</span>
-                    <h1>Welkom bij Panta Club!</h1>
-                    <p class="subtitle">Fietsregistratie Platform - Beheer jouw fietsen, klanten en onderhoud</p>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="showMessage('Fietsen pagina komt binnenkort!')">
-                            ➕ Fiets toevoegen
-                        </button>
-                        <button class="btn btn-accent" onclick="showMessage('Klanten pagina komt binnenkort!')">
-                            👤 Klant toevoegen
-                        </button>
-                        <button class="btn btn-primary" onclick="showMessage('Onderhoud pagina komt binnenkort!')">
-                            🔧 Onderhoud registreren
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="stats">
-                    <div class="stat-item">
-                        <div class="number">12</div>
-                        <div class="label">🚲 Totaal fietsen</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="number">8</div>
-                        <div class="label">👤 Totaal klanten</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="number">3</div>
-                        <div class="label">🔧 Openstaand onderhoud</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="number">5</div>
-                        <div class="label">📋 Verhuurde fietsen</div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3 style="margin-bottom: 15px;">📌 Recente activiteit</h3>
-                    <ul class="activity-list">
-                        <li>
-                            🚲 Fiets #12345 toegevoegd
-                            <span class="time">10 min geleden</span>
-                        </li>
-                        <li>
-                            👤 Nieuwe klant: Marie Peeters
-                            <span class="time">1 uur geleden</span>
-                        </li>
-                        <li>
-                            🔧 Onderhoud geregistreerd voor fiets #67890
-                            <span class="time">3 uur geleden</span>
-                        </li>
-                    </ul>
-                </div>
-            `,
-            
-            fietsen: `
-                <div style="padding: 30px 0;">
-                    <h1>🚲 Fietsen</h1>
-                    <p style="color: #666; margin-bottom: 20px;">Beheer hier alle fietsen.</p>
-                    
-                    <button class="btn btn-primary" onclick="showMessage('Nieuwe fiets toevoegen komt binnenkort!')">
-                        ➕ Nieuwe fiets toevoegen
-                    </button>
-                    
-                    <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
-                        <h3>Geen fietsen gevonden</h3>
-                        <p style="color: #999;">Voeg je eerste fiets toe.</p>
-                    </div>
-                </div>
-            `,
-            
-            klanten: `
-                <div style="padding: 30px 0;">
-                    <h1>👤 Klanten</h1>
-                    <p style="color: #666; margin-bottom: 20px;">Beheer hier alle klanten.</p>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="showMessage('Nieuwe klant toevoegen komt binnenkort!')">
-                            ➕ Nieuwe klant toevoegen
-                        </button>
-                        <button class="btn btn-accent" onclick="showMessage('Excel import komt binnenkort!')">
-                            📊 Importeer Excel
-                        </button>
-                    </div>
-                    
-                    <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
-                        <h3>Geen klanten gevonden</h3>
-                        <p style="color: #999;">Voeg je eerste klant toe.</p>
-                    </div>
-                </div>
-            `,
-            
-            onderhoud: `
-                <div style="padding: 30px 0;">
-                    <h1>🔧 Onderhoudsboekje</h1>
-                    <p style="color: #666; margin-bottom: 20px;">Registreer onderhoudsbeurten per fiets.</p>
-                    
-                    <button class="btn btn-primary" onclick="showMessage('Onderhoud registreren komt binnenkort!')">
-                        ➕ Nieuw onderhoud registreren
-                    </button>
-                    
-                    <div class="card" style="text-align: center; padding: 40px; margin-top: 20px;">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">🔧</div>
-                        <h3>Geen onderhoudsbeurten</h3>
-                        <p style="color: #999;">Registreer de eerste onderhoudsbeurt.</p>
-                    </div>
-                </div>
-            `
-        };
-        
-        // ============================================
-        // FUNCTIES
-        // ============================================
-        
-        function navigateTo(page) {
-            console.log('📄 Navigeren naar:', page);
-            const content = PAGES[page];
-            if (!content) {
-                showMessage('Pagina "' + page + '" is nog niet beschikbaar.');
-                return;
-            }
-            
-            // ============================================
-            // BELANGRIJK: We vervangen ALLEEN de inhoud
-            // De container class blijft behouden!
-            // ============================================
-            const wrapper = document.getElementById('content-wrapper');
-            if (wrapper) {
-                // We vervangen de innerHTML, maar de container class blijft
-                // omdat die op de wrapper div staat, niet op de inhoud
-                wrapper.innerHTML = content;
-                console.log('✅ Inhoud vervangen in container');
-            } else {
-                console.error('❌ content-wrapper niet gevonden!');
-            }
-            
-            // Update navigatie active state
-            document.querySelectorAll('.navbar-links a').forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('data-page') === page) {
-                    link.classList.add('active');
-                }
-            });
-            
-            // Sluit mobiel menu
-            const navbarLinks = document.getElementById('navbarLinks');
-            const menuToggle = document.getElementById('menuToggle');
-            if (navbarLinks) {
-                navbarLinks.classList.remove('open');
-            }
-            if (menuToggle) {
-                menuToggle.textContent = '☰';
-            }
-        }
-        
-        function showMessage(message) {
-            alert('📢 ' + message);
-        }
-        
-        function handleLogout() {
-            if (confirm('Weet je zeker dat je wilt uitloggen?')) {
-                alert('👋 Je bent uitgelogd!');
-                navigateTo('dashboard');
-            }
-        }
-        
-        // ============================================
-        // HAMBURGER MENU
-        // ============================================
-        
-        function setupMobileMenu() {
-            const menuToggle = document.getElementById('menuToggle');
-            const navbarLinks = document.getElementById('navbarLinks');
-            
-            if (menuToggle && navbarLinks) {
-                menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    navbarLinks.classList.toggle('open');
-                    this.textContent = navbarLinks.classList.contains('open') ? '✕' : '☰';
-                });
-                
-                navbarLinks.querySelectorAll('a').forEach(link => {
-                    link.addEventListener('click', function() {
-                        navbarLinks.classList.remove('open');
-                        if (menuToggle) {
-                            menuToggle.textContent = '☰';
-                        }
-                    });
-                });
-            }
-        }
-        
-        // ============================================
-        // START
-        // ============================================
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ DOM geladen!');
-            
-            // Controleer of de container bestaat
-            const wrapper = document.getElementById('content-wrapper');
-            if (wrapper) {
-                console.log('✅ content-wrapper gevonden met class:', wrapper.className);
-            } else {
-                console.error('❌ content-wrapper niet gevonden!');
-            }
-            
-            navigateTo('dashboard');
-            setupMobileMenu();
-            
-            document.getElementById('logout-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                handleLogout();
-            });
-            
-            document.querySelectorAll('.navbar-links a[data-page]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    navigateTo(this.getAttribute('data-page'));
-                });
-            });
-            
-            console.log('✅ Applicatie klaar voor gebruik!');
-        });
-        
-        window.navigateTo = navigateTo;
-        window.showMessage = showMessage;
-        window.handleLogout = handleLogout;
-		<!-- ============================================
-     JAVASCRIPT - EERST CONFIG, DAN AUTH, DAN APP
-     ============================================ -->
-<!-- Eerst configuratie -->
-<script src="../src/assets/js/config.js"></script>
-
-<!-- Dan authenticatie -->
-<script src="../src/assets/js/auth.js"></script>
-
-<!-- Dan de hoofdapplicatie -->
-<script src="../src/assets/js/app.js"></script>
-    </script>
+    
+    <!-- 1. Eerst configuratie (Supabase gegevens) -->
+    <script src="../src/assets/js/config.js"></script>
+    
+    <!-- 2. Dan authenticatie (login/logout functies) -->
+    <script src="../src/assets/js/auth.js"></script>
+    
+    <!-- 3. Dan de hoofdapplicatie (start de app) -->
+    <script src="../src/assets/js/app.js"></script>
 </body>
 </html>
