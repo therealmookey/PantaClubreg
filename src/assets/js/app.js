@@ -1,6 +1,6 @@
 /**
  * ============================================
- * HOOFDAPPLICATIE - MET MODELLEN, FIETSEN, KLANTEN EN VERHUUR
+ * HOOFDAPPLICATIE - MET MODELLEN, FIETSEN, KLANTEN, VERHUUR EN ONDERHOUD
  * ============================================
  */
 
@@ -104,6 +104,9 @@ const PAGES = {
                     </button>
                     <button class="btn btn-accent" onclick="window.navigateTo('verhuur')">
                         📋 Verhuur starten
+                    </button>
+                    <button class="btn btn-primary" onclick="window.navigateTo('onderhoud')">
+                        🔧 Onderhoud
                     </button>
                 </div>
             </div>
@@ -480,7 +483,7 @@ const PAGES = {
         </div>
     `,
     
-        onderhoud: `
+    onderhoud: `
         <div style="padding: 20px 0;">
             <h1>🔧 Onderhoudsboekje</h1>
             <p style="color: #666; margin-bottom: 20px;">
@@ -492,7 +495,6 @@ const PAGES = {
                 ➕ Nieuw onderhoud registreren
             </button>
             
-            <!-- FORMULIER VOOR NIEUW ONDERHOUD -->
             <div id="addOnderhoudForm" style="display: none; margin-bottom: 30px;">
                 <div class="card">
                     <h3>Nieuw onderhoud registreren</h3>
@@ -552,7 +554,6 @@ const PAGES = {
                 </div>
             </div>
             
-            <!-- FILTERS -->
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                 <input type="text" id="onderhoudZoekInput" placeholder="🔍 Zoek op serienummer, beschrijving..." 
                        style="flex:1;min-width:200px;padding:10px 16px;border:2px solid #E0DCD6;border-radius:8px;font-family:'Poppins',sans-serif;font-size:1rem;">
@@ -568,7 +569,6 @@ const PAGES = {
                 <button class="btn btn-outline" onclick="window.resetOnderhoudFilter()">🔄 Reset</button>
             </div>
             
-            <!-- ONDERHOUD LIJST -->
             <div id="onderhoudLijst">
                 <div class="card" style="text-align: center; padding: 40px;">
                     <div style="font-size: 3rem; margin-bottom: 10px;">🔧</div>
@@ -576,7 +576,6 @@ const PAGES = {
                 </div>
             </div>
         </div>
-    `,
     `
 };
 
@@ -586,13 +585,13 @@ const PAGES = {
 
 function navigateTo(page) {
     console.log('📄 Navigeren naar:', page);
-    const content = PAGES[page];
+    var content = PAGES[page];
     if (!content) {
         showMessage('Pagina "' + page + '" is nog niet beschikbaar.');
         return;
     }
     
-    const wrapper = document.getElementById('content-wrapper');
+    var wrapper = document.getElementById('content-wrapper');
     if (wrapper) {
         wrapper.innerHTML = content;
     }
@@ -613,6 +612,9 @@ function navigateTo(page) {
     if (page === 'verhuur') {
         setTimeout(loadVerhuur, 100);
     }
+    if (page === 'onderhoud') {
+        setTimeout(loadOnderhoud, 100);
+    }
     if (page === 'dashboard') {
         setTimeout(loadStats, 100);
     }
@@ -626,7 +628,7 @@ async function handleLogout() {
     console.log('🚪 Uitloggen...');
     if (confirm('Weet je zeker dat je wilt uitloggen?')) {
         if (typeof window.logoutUser === 'function') {
-            const result = await window.logoutUser();
+            var result = await window.logoutUser();
             if (result.success) {
                 window.currentUser = null;
                 if (typeof window.renderNavigation === 'function') {
@@ -648,19 +650,19 @@ window.handleLogout = handleLogout;
 // ============================================
 
 function genereerSerienummer() {
-    const prefix = 'PC';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
+    var prefix = 'PC';
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    var result = '';
+    for (var i = 0; i < 8; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     return prefix + '-' + result;
 }
 
 function vulSerienummerIn() {
-    const input = document.getElementById('fietsSerienummer');
+    var input = document.getElementById('fietsSerienummer');
     if (input) {
-        const nieuwSerienummer = genereerSerienummer();
+        var nieuwSerienummer = genereerSerienummer();
         input.value = nieuwSerienummer;
         input.style.borderColor = '#28a745';
         input.style.backgroundColor = '#f0fff4';
@@ -676,7 +678,7 @@ function vulSerienummerIn() {
 // ============================================
 
 function showAddModelForm() {
-    const form = document.getElementById('addModelForm');
+    var form = document.getElementById('addModelForm');
     if (form) {
         form.style.display = 'block';
         form.scrollIntoView({ behavior: 'smooth' });
@@ -684,11 +686,11 @@ function showAddModelForm() {
 }
 
 function hideAddModelForm() {
-    const form = document.getElementById('addModelForm');
+    var form = document.getElementById('addModelForm');
     if (form) {
         form.style.display = 'none';
     }
-    const message = document.getElementById('modelFormMessage');
+    var message = document.getElementById('modelFormMessage');
     if (message) {
         message.innerHTML = '';
     }
@@ -696,7 +698,7 @@ function hideAddModelForm() {
 
 async function loadModellen() {
     console.log('📥 Laden van modellen...');
-    const lijst = document.getElementById('modellenLijst');
+    var lijst = document.getElementById('modellenLijst');
     if (!lijst) return;
     
     try {
@@ -705,7 +707,7 @@ async function loadModellen() {
             return;
         }
         
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*')
             .order('merk', { ascending: true });
@@ -723,7 +725,7 @@ async function loadModellen() {
             return;
         }
         
-        let html = `
+        var html = `
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -838,7 +840,7 @@ async function saveModel(modelId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('fiets_modellen')
             .update({ merk: merk, model: model, kleur: kleur })
             .eq('id', modelId);
@@ -875,7 +877,7 @@ async function deleteModel(modelId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('fiets_modellen')
             .delete()
             .eq('id', modelId);
@@ -926,7 +928,7 @@ async function handleModelSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('fiets_modellen')
             .insert([{ merk: merk, model: model, kleur: kleur }]);
         
@@ -979,7 +981,7 @@ async function loadModelSelectOptions() {
     if (!select) return;
     
     try {
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*')
             .order('merk', { ascending: true });
@@ -1009,9 +1011,9 @@ async function loadFietsen() {
             return;
         }
         
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('individuele_fietsen')
-            .select('*, fiets_modellen (merk, model, kleur)')  // depot wordt automatisch meegenomen
+            .select('*, fiets_modellen (merk, model, kleur)')
             .order('aangemaakt_op', { ascending: false });
         
         if (error) throw error;
@@ -1045,7 +1047,7 @@ async function filterFietsen() {
     
     if (alleFietsen.length === 0) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select('*, fiets_modellen (merk, model, kleur)')
                 .order('aangemaakt_op', { ascending: false });
@@ -1120,15 +1122,14 @@ function toonFietsenLijst(data, footerText) {
                            fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
         var modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
         
-        // Depot weergave met kleurcodering
         var depotDisplay = '-';
         var depotKleur = '#999';
         if (fiets.depot) {
             depotDisplay = fiets.depot;
             if (fiets.depot.toLowerCase().includes('puurs') || fiets.depot.toLowerCase().includes('nektari')) {
-                depotKleur = '#007bff'; // Blauw voor Puurs
+                depotKleur = '#007bff';
             } else if (fiets.depot.toLowerCase().includes('gent') || fiets.depot.toLowerCase().includes('pantaclub')) {
-                depotKleur = '#28a745'; // Groen voor Gent
+                depotKleur = '#28a745';
             }
         }
         
@@ -1138,11 +1139,7 @@ function toonFietsenLijst(data, footerText) {
                 <td>${modelInfo.merk} ${modelInfo.model}</td>
                 <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;"></span> ${modelInfo.kleur}</td>
                 <td><span class="badge ${statusClass}" id="fiets-status-${fiets.id}">${fiets.status}</span></td>
-                <td>
-                    <span style="color:${depotKleur};font-weight:600;">
-                        ${depotDisplay}
-                    </span>
-                </td>
+                <td><span style="color:${depotKleur};font-weight:600;">${depotDisplay}</span></td>
                 <td style="text-align:center;">
                     <button onclick="window.showQRCode('${fiets.serienummer}')" 
                             style="background:none;border:none;cursor:pointer;font-size:1.2rem;"
@@ -1193,7 +1190,7 @@ function editFiets(fietsId) {
     var statusCell = document.getElementById('fiets-status-' + fietsId);
     var huidigeStatus = statusCell ? statusCell.textContent.trim() : 'beschikbaar';
     
-    // Haal huidige depot op
+    // Depot ophalen
     var depotCell = row.querySelector('td:nth-child(5)');
     var huidigDepot = depotCell ? depotCell.textContent.trim() : '';
     if (huidigDepot === '-') huidigDepot = '';
@@ -1215,7 +1212,6 @@ function editFiets(fietsId) {
         `;
     }
     
-    // Vervang depot cel door een dropdown
     if (depotCell) {
         depotCell.innerHTML = `
             <select id="edit-depot-${fietsId}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
@@ -1270,14 +1266,13 @@ async function saveFiets(fietsId) {
             status: status 
         };
         
-        // Alleen depot toevoegen als die bestaat en niet leeg is
         if (depot && depot !== '') {
             updateData.depot = depot;
         } else {
             updateData.depot = null;
         }
         
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .update(updateData)
             .eq('id', fietsId);
@@ -1306,7 +1301,7 @@ async function deleteFiets(fietsId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .delete()
             .eq('id', fietsId);
@@ -1357,7 +1352,7 @@ async function handleFietsSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .insert([{
                 serienummer: serienummer,
@@ -1551,15 +1546,13 @@ async function importFietsExcelData() {
     var matchedModels = [];
     
     try {
-        // HAAL ALLE BESTAANDE MODELLEN OP
-        const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
+        var { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*');
         
         if (modellenError) throw modellenError;
         
-        // HAAL ALLE BESTAANDE FIETSEN OP (VOOR DUPLICATE CHECK)
-        const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
+        var { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('serienummer');
         
@@ -1567,17 +1560,14 @@ async function importFietsExcelData() {
         
         var bestaandeSerienummers = new Set(bestaandeFietsen.map(function(f) { return f.serienummer; }));
         
-        // HAAL ALLE KLANTEN OP (VOOR KOPPELING)
-        const { data: alleKlanten, error: klantenError } = await window.supabaseClient
+        var { data: alleKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('id, naam');
         
         if (klantenError) throw klantenError;
         
-        // MAP VOOR UNIEKE MODELLEN (VERMIJD DUPLICATEN)
         var modelCache = {};
         
-        // Bouw een cache van bestaande modellen op basis van "merk|model|kleur"
         bestaandeModellen.forEach(function(model) {
             var key = (model.merk + '|' + model.model + '|' + (model.kleur || '')).toLowerCase();
             modelCache[key] = model.id;
@@ -1586,7 +1576,6 @@ async function importFietsExcelData() {
         for (var i = 0; i < fietsExcelData.length; i++) {
             var row = fietsExcelData[i];
             
-            // 1. SERIENUMMER
             var serienummer = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1611,7 +1600,6 @@ async function importFietsExcelData() {
                 continue;
             }
             
-            // 2. TYPE/MODEL
             var type = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1624,7 +1612,6 @@ async function importFietsExcelData() {
                 }
             }
             
-            // 3. KLEUR
             var kleur = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1637,7 +1624,6 @@ async function importFietsExcelData() {
                 }
             }
             
-            // 4. MERK
             var merk = 'WOOM';
             if (type) {
                 var typeParts = type.split(' ');
@@ -1649,7 +1635,6 @@ async function importFietsExcelData() {
                 }
             }
             
-            // 5. MODEL ID - CHECK OF MODEL AL BESTAAT
             var modelKey = (merk + '|' + type + '|' + (kleur || '')).toLowerCase();
             var modelId = null;
             
@@ -1658,7 +1643,7 @@ async function importFietsExcelData() {
                 matchedModels.push(merk + ' - ' + type + ' (' + (kleur || 'Onbekend') + ')');
             } else if (type) {
                 var modelKleur = kleur || 'Onbekend';
-                const { data: newModel, error: newModelError } = await window.supabaseClient
+                var { data: newModel, error: newModelError } = await window.supabaseClient
                     .from('fiets_modellen')
                     .insert([{ 
                         merk: merk, 
@@ -1681,7 +1666,6 @@ async function importFietsExcelData() {
                 continue;
             }
             
-            // 6. STATUS
             var statusRaw = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1701,7 +1685,6 @@ async function importFietsExcelData() {
                 fietsStatus = 'in-onderhoud';
             }
             
-            // 7. KLANT KOPPELING
             var klantId = null;
             var klantNaam = null;
             for (var key in row) {
@@ -1725,7 +1708,6 @@ async function importFietsExcelData() {
                 }
             }
             
-            // 8. NOTITIES
             var notities = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1754,8 +1736,7 @@ async function importFietsExcelData() {
                 notities = notities ? notities + ' | Oorsprong: ' + oorsprongSerie : 'Oorsprong: ' + oorsprongSerie;
             }
             
-            // 9. FIETS OPSLAAN (zonder aankoop_datum)
-            const { error: fietsError } = await window.supabaseClient
+            var { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .insert([{
                     serienummer: serienummer,
@@ -1774,7 +1755,6 @@ async function importFietsExcelData() {
             }
         }
         
-        // RESULTAAT TONEN
         var resultMessage = '✅ ' + successCount + ' fietsen succesvol geïmporteerd.';
         if (newModels.length > 0) {
             resultMessage += '\n📦 Nieuwe modellen aangemaakt: ' + newModels.length;
@@ -1950,9 +1930,6 @@ async function importDepotData() {
         for (var i = 0; i < depotExcelData.length; i++) {
             var row = depotExcelData[i];
             
-            // ============================================
-            // 1. SERIENUMMER VINDEN
-            // ============================================
             var serienummer = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1971,16 +1948,12 @@ async function importDepotData() {
                 continue;
             }
             
-            // ============================================
-            // 2. DEPOT BEPALEN (TRUE/FALSE)
-            // ============================================
             var depot = null;
             var depotKolom = null;
             
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
                     var keyLower = key.toLowerCase();
-                    // Check of de waarde TRUE is (zowel boolean als string)
                     var isTrue = false;
                     if (typeof row[key] === 'boolean') {
                         isTrue = row[key] === true;
@@ -1988,7 +1961,6 @@ async function importDepotData() {
                         isTrue = row[key].toLowerCase().trim() === 'true';
                     }
                     
-                    // Als de waarde TRUE is en de kolomnaam lijkt op een depot
                     if (isTrue) {
                         if (keyLower.includes('puurs') || keyLower.includes('nektari')) {
                             depot = 'Puurs - Nektari';
@@ -2003,7 +1975,6 @@ async function importDepotData() {
                 }
             }
             
-            // Als geen depot gevonden is, sla deze rij over
             if (!depot) {
                 skippedCount++;
                 errors.push('Rij ' + (i + 1) + ': Geen depot gevonden (geen TRUE waarde)');
@@ -2012,12 +1983,9 @@ async function importDepotData() {
             
             console.log('🔍 Rij ' + (i + 1) + ': Serienummer ' + serienummer + ' → Depot: ' + depot + ' (kolom: ' + depotKolom + ')');
             
-            // ============================================
-            // 3. ZOEK DE FIETS IN DE DATABASE
-            // ============================================
-            const { data: fietsData, error: fietsError } = await window.supabaseClient
+            var { data: fietsData, error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
-                .select('id, serienummer, opmerkingen')
+                .select('id, serienummer, opmerkingen, depot')
                 .eq('serienummer', serienummer);
             
             if (fietsError) {
@@ -2034,28 +2002,10 @@ async function importDepotData() {
             
             var fiets = fietsData[0];
             
-            // ============================================
-            // 4. UPDATE DE FIETS MET DEPOT
-            // ============================================
-            var huidigeOpmerkingen = fiets.opmerkingen || '';
-            var nieuweOpmerkingen = huidigeOpmerkingen;
-            
-            // Verwijder bestaande depot info (als die er is)
-            nieuweOpmerkingen = nieuweOpmerkingen.replace(/\s*\|\s*Depot:[^|]*/i, '');
-            nieuweOpmerkingen = nieuweOpmerkingen.replace(/Depot:[^|]*\s*\|\s*/i, '');
-            
-            // Voeg nieuwe depot toe
-            if (nieuweOpmerkingen.trim()) {
-                nieuweOpmerkingen = nieuweOpmerkingen.trim() + ' | Depot: ' + depot;
-            } else {
-                nieuweOpmerkingen = 'Depot: ' + depot;
-            }
-            
-            // Update de fiets
-            const { error: updateError } = await window.supabaseClient
+            var { error: updateError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .update({ 
-                    opmerkingen: nieuweOpmerkingen
+                    depot: depot
                 })
                 .eq('id', fiets.id);
             
@@ -2143,7 +2093,7 @@ async function loadKlanten() {
             return;
         }
         
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('klanten')
             .select('*')
             .order('naam', { ascending: true });
@@ -2177,7 +2127,7 @@ async function filterKlanten() {
     
     if (alleKlanten.length === 0) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('klanten')
                 .select('*')
                 .order('naam', { ascending: true });
@@ -2341,7 +2291,7 @@ async function saveKlant(klantId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('klanten')
             .update({ naam: naam, email: email, telefoon: telefoon, adres: adres })
             .eq('id', klantId);
@@ -2378,7 +2328,7 @@ async function deleteKlant(klantId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('klanten')
             .delete()
             .eq('id', klantId);
@@ -2425,7 +2375,7 @@ async function handleKlantSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('klanten')
             .insert([{ naam: naam, email: email, telefoon: telefoon, adres: adres }]);
         
@@ -2583,7 +2533,7 @@ async function importExcelData() {
     var skippedCount = 0;
     
     try {
-        const { data: bestaandeKlanten, error: klantenError } = await window.supabaseClient
+        var { data: bestaandeKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('email');
         
@@ -2627,7 +2577,7 @@ async function importExcelData() {
                 continue;
             }
             
-            const { error } = await window.supabaseClient
+            var { error } = await window.supabaseClient
                 .from('klanten')
                 .insert([{
                     naam: naam,
@@ -2711,7 +2661,7 @@ async function loadVerhuurSelectOptions() {
     
     if (fietsSelect) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select('id, serienummer, fiets_modellen (merk, model, kleur)')
                 .eq('status', 'beschikbaar')
@@ -2735,7 +2685,7 @@ async function loadVerhuurSelectOptions() {
     
     if (klantSelect) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('klanten')
                 .select('id, naam')
                 .order('naam', { ascending: true });
@@ -2768,7 +2718,7 @@ async function loadVerhuur() {
             return;
         }
         
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('verhuur_historiek')
             .select(`
                 *,
@@ -2807,7 +2757,7 @@ async function filterVerhuur() {
     
     if (alleVerhuur.length === 0) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('verhuur_historiek')
                 .select(`
                     *,
@@ -2892,7 +2842,7 @@ function toonVerhuurLijst(data, footerText) {
         
         var isActief = !verhuur.eind_datum;
         var statusClass = isActief ? 'badge-rented' : 'badge-available';
-        var statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
+        var statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
         
         var startDatum = new Date(verhuur.start_datum);
         var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
@@ -2977,7 +2927,7 @@ async function handleVerhuurSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Verhuur wordt gestart...</p>';
     
     try {
-        const { error: verhuurError } = await window.supabaseClient
+        var { error: verhuurError } = await window.supabaseClient
             .from('verhuur_historiek')
             .insert([{
                 fiets_id: fietsId,
@@ -2988,7 +2938,7 @@ async function handleVerhuurSubmit(event) {
         
         if (verhuurError) throw verhuurError;
         
-        const { error: fietsError } = await window.supabaseClient
+        var { error: fietsError } = await window.supabaseClient
             .from('individuele_fietsen')
             .update({ status: 'verhuurd' })
             .eq('id', fietsId);
@@ -3027,7 +2977,7 @@ async function beëindigVerhuur(verhuurId) {
     var eindDatum = new Date().toISOString().split('T')[0];
     
     try {
-        const { data: verhuurData, error: verhuurFetchError } = await window.supabaseClient
+        var { data: verhuurData, error: verhuurFetchError } = await window.supabaseClient
             .from('verhuur_historiek')
             .select('fiets_id')
             .eq('id', verhuurId)
@@ -3035,7 +2985,7 @@ async function beëindigVerhuur(verhuurId) {
         
         if (verhuurFetchError) throw verhuurFetchError;
         
-        const { error: updateError } = await window.supabaseClient
+        var { error: updateError } = await window.supabaseClient
             .from('verhuur_historiek')
             .update({ eind_datum: eindDatum })
             .eq('id', verhuurId);
@@ -3043,7 +2993,7 @@ async function beëindigVerhuur(verhuurId) {
         if (updateError) throw updateError;
         
         if (verhuurData && verhuurData.fiets_id) {
-            const { error: fietsError } = await window.supabaseClient
+            var { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .update({ status: 'beschikbaar' })
                 .eq('id', verhuurData.fiets_id);
@@ -3074,7 +3024,7 @@ async function deleteVerhuur(verhuurId) {
     }
     
     try {
-        const { data: verhuurData, error: fetchError } = await window.supabaseClient
+        var { data: verhuurData, error: fetchError } = await window.supabaseClient
             .from('verhuur_historiek')
             .select('fiets_id, eind_datum')
             .eq('id', verhuurId)
@@ -3082,7 +3032,7 @@ async function deleteVerhuur(verhuurId) {
         
         if (fetchError) throw fetchError;
         
-        const { error: deleteError } = await window.supabaseClient
+        var { error: deleteError } = await window.supabaseClient
             .from('verhuur_historiek')
             .delete()
             .eq('id', verhuurId);
@@ -3090,7 +3040,7 @@ async function deleteVerhuur(verhuurId) {
         if (deleteError) throw deleteError;
         
         if (verhuurData && !verhuurData.eind_datum && verhuurData.fiets_id) {
-            const { error: fietsError } = await window.supabaseClient
+            var { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .update({ status: 'beschikbaar' })
                 .eq('id', verhuurData.fiets_id);
@@ -3108,6 +3058,7 @@ async function deleteVerhuur(verhuurId) {
         showMessage('❌ Fout: ' + error.message);
     }
 }
+
 // ============================================
 // ONDERHOUD FUNCTIES
 // ============================================
@@ -3139,13 +3090,12 @@ function hideAddOnderhoudForm() {
 }
 
 async function loadOnderhoudSelectOptions() {
-    // Laad alle fietsen
     var fietsSelect = document.getElementById('onderhoudFiets');
     var verhuurSelect = document.getElementById('onderhoudVerhuur');
     
     if (fietsSelect) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select('id, serienummer, fiets_modellen (merk, model, kleur)')
                 .order('serienummer', { ascending: true });
@@ -3167,7 +3117,6 @@ async function loadOnderhoudSelectOptions() {
         }
     }
     
-    // Event listener voor fiets selectie → laad verhuur geschiedenis
     if (fietsSelect) {
         fietsSelect.addEventListener('change', function() {
             var fietsId = this.value;
@@ -3186,7 +3135,7 @@ async function loadVerhuurOptionsForFiets(fietsId) {
     }
     
     try {
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('verhuur_historiek')
             .select(`
                 id,
@@ -3221,10 +3170,6 @@ async function loadVerhuurOptionsForFiets(fietsId) {
         verhuurSelect.innerHTML = '<option value="">-- Fout bij laden --</option>';
     }
 }
-
-// ============================================
-// ONDERHOUD TOEVOEGEN (SUBMIT)
-// ============================================
 
 document.addEventListener('submit', async function(event) {
     if (event.target.id === 'onderhoudForm') {
@@ -3270,7 +3215,7 @@ async function handleOnderhoudSubmit(event) {
             insertData.kost = parseFloat(kost);
         }
         
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('onderhoud')
             .insert([insertData]);
         
@@ -3294,10 +3239,6 @@ async function handleOnderhoudSubmit(event) {
     }
 }
 
-// ============================================
-// ONDERHOUD LADEN
-// ============================================
-
 async function loadOnderhoud() {
     console.log('📥 Laden van onderhoud...');
     alleOnderhoud = [];
@@ -3311,7 +3252,7 @@ async function loadOnderhoud() {
             return;
         }
         
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('onderhoud')
             .select(`
                 *,
@@ -3415,10 +3356,6 @@ function toonOnderhoudLijst(data, footerText) {
     lijst.innerHTML = html;
 }
 
-// ============================================
-// ONDERHOUD FILTER
-// ============================================
-
 async function filterOnderhoud() {
     var zoekTerm = document.getElementById('onderhoudZoekInput').value.toLowerCase().trim();
     var typeFilter = document.getElementById('onderhoudTypeFilter').value;
@@ -3427,7 +3364,7 @@ async function filterOnderhoud() {
     
     if (alleOnderhoud.length === 0) {
         try {
-            const { data, error } = await window.supabaseClient
+            var { data, error } = await window.supabaseClient
                 .from('onderhoud')
                 .select(`
                     *,
@@ -3486,10 +3423,6 @@ function resetOnderhoudFilter() {
     loadOnderhoud();
 }
 
-// ============================================
-// ONDERHOUD VERWIJDEREN
-// ============================================
-
 async function deleteOnderhoud(onderhoudId) {
     console.log('🗑️ Verwijderen van onderhoud:', onderhoudId);
     
@@ -3498,7 +3431,7 @@ async function deleteOnderhoud(onderhoudId) {
     }
     
     try {
-        const { error } = await window.supabaseClient
+        var { error } = await window.supabaseClient
             .from('onderhoud')
             .delete()
             .eq('id', onderhoudId);
@@ -3523,31 +3456,37 @@ async function loadStats() {
     try {
         if (!window.supabaseClient) return;
         
-        const { count: modellenCount } = await window.supabaseClient
+        var { count: modellenCount } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*', { count: 'exact', head: true });
         
-        const { count: fietsenCount } = await window.supabaseClient
+        var { count: fietsenCount } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('*', { count: 'exact', head: true });
         
-        const { count: klantenCount } = await window.supabaseClient
+        var { count: klantenCount } = await window.supabaseClient
             .from('klanten')
             .select('*', { count: 'exact', head: true });
         
-        const { count: verhuurCount } = await window.supabaseClient
+        var { count: verhuurCount } = await window.supabaseClient
             .from('verhuur_historiek')
             .select('*', { count: 'exact', head: true })
             .is('eind_datum', null);
+        
+        var { count: onderhoudCount } = await window.supabaseClient
+            .from('onderhoud')
+            .select('*', { count: 'exact', head: true });
         
         var el1 = document.getElementById('stat-modellen');
         var el2 = document.getElementById('stat-fietsen');
         var el3 = document.getElementById('stat-klanten');
         var el4 = document.getElementById('stat-verhuur');
+        var el5 = document.getElementById('stat-onderhoud');
         if (el1) el1.textContent = modellenCount || 0;
         if (el2) el2.textContent = fietsenCount || 0;
         if (el3) el3.textContent = klantenCount || 0;
         if (el4) el4.textContent = verhuurCount || 0;
+        if (el5) el5.textContent = onderhoudCount || 0;
     } catch (error) {
         console.error('❌ Fout bij laden statistieken:', error);
     }
@@ -3584,7 +3523,7 @@ async function showQRCode(serienummer) {
     
     var fietsGegevens = null;
     try {
-        const { data, error } = await window.supabaseClient
+        var { data, error } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('*, fiets_modellen (merk, model, kleur)')
             .eq('serienummer', serienummer)
@@ -3601,61 +3540,21 @@ async function showQRCode(serienummer) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'qrModal';
-        modal.style.cssText = `
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        `;
+        modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; padding: 20px;';
         modal.innerHTML = `
-            <div style="
-                background: white;
-                border-radius: 12px;
-                padding: 30px;
-                max-width: 450px;
-                width: 100%;
-                text-align: center;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                position: relative;
-            ">
-                <button onclick="window.closeQRModal()" style="
-                    position: absolute;
-                    top: 10px;
-                    right: 15px;
-                    background: none;
-                    border: none;
-                    font-size: 1.5rem;
-                    cursor: pointer;
-                    color: #999;
-                ">✕</button>
-                
+            <div style="background: white; border-radius: 12px; padding: 30px; max-width: 450px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;">
+                <button onclick="window.closeQRModal()" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✕</button>
                 <div id="qrExportContainer" style="padding: 10px;">
                     <h3 style="margin-bottom: 5px; color: #1A2B4C;">🚲 Panta Club</h3>
-                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
-                        Scan de QR-code voor fietsinformatie
-                    </p>
-                    
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Scan de QR-code voor fietsinformatie</p>
                     <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 10px 0;"></div>
-                    
                     <div id="qrFietsInfo" style="margin-top: 10px; padding: 10px; background: #f8f6f3; border-radius: 8px;">
                         <p style="margin: 3px 0; font-weight: 600; color: #1A2B4C;" id="qrModelDisplay">-</p>
-                        <p style="margin: 3px 0; color: #666; font-size: 0.9rem;">
-                            Serienummer: <strong id="qrSerienummerDisplay">-</strong>
-                        </p>
+                        <p style="margin: 3px 0; color: #666; font-size: 0.9rem;">Serienummer: <strong id="qrSerienummerDisplay">-</strong></p>
                     </div>
                 </div>
-                
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-                    <button onclick="window.downloadQRCode()" class="btn btn-primary">
-                        ⬇️ Download afbeelding
-                    </button>
+                    <button onclick="window.downloadQRCode()" class="btn btn-primary">⬇️ Download afbeelding</button>
                 </div>
             </div>
         `;
@@ -3680,10 +3579,7 @@ async function showQRCode(serienummer) {
         if (fietsGegevens && fietsGegevens.fiets_modellen) {
             var model = fietsGegevens.fiets_modellen;
             var kleurStyle = 'display:inline-block;width:14px;height:14px;border-radius:50%;background:' + model.kleur.toLowerCase() + ';border:1px solid #ddd;vertical-align:middle;margin-right:5px;';
-            modelDisplay.innerHTML = `
-                <span style="${kleurStyle}"></span>
-                ${model.merk} ${model.model} (${model.kleur})
-            `;
+            modelDisplay.innerHTML = '<span style="' + kleurStyle + '"></span> ' + model.merk + ' ' + model.model + ' (' + model.kleur + ')';
         } else {
             modelDisplay.textContent = 'Onbekend model';
         }
@@ -3796,32 +3692,27 @@ window.saveModel = saveModel;
 window.cancelEditModel = cancelEditModel;
 window.deleteModel = deleteModel;
 
-// Serienummer generator
 window.genereerSerienummer = genereerSerienummer;
 window.vulSerienummerIn = vulSerienummerIn;
 
-// Fietsen
 window.filterFietsen = filterFietsen;
 window.resetFietsFilter = resetFietsFilter;
 window.editFiets = editFiets;
 window.saveFiets = saveFiets;
 window.deleteFiets = deleteFiets;
 
-// Fietsen Excel Import (Stocklijst)
 window.showFietsExcelImport = showFietsExcelImport;
 window.closeFietsExcelImport = closeFietsExcelImport;
 window.handleFietsExcelFile = handleFietsExcelFile;
 window.handleFietsExcelDrop = handleFietsExcelDrop;
 window.importFietsExcelData = importFietsExcelData;
 
-// Depot Import
 window.showDepotImport = showDepotImport;
 window.closeDepotImport = closeDepotImport;
 window.handleDepotFile = handleDepotFile;
 window.handleDepotDrop = handleDepotDrop;
 window.importDepotData = importDepotData;
 
-// Klanten
 window.showAddKlantForm = showAddKlantForm;
 window.hideAddKlantForm = hideAddKlantForm;
 window.loadKlanten = loadKlanten;
@@ -3832,14 +3723,12 @@ window.deleteKlant = deleteKlant;
 window.filterKlanten = filterKlanten;
 window.resetKlantFilter = resetKlantFilter;
 
-// Klant Excel Import (Subscribers)
 window.showExcelImport = showExcelImport;
 window.closeExcelImport = closeExcelImport;
 window.handleExcelFile = handleExcelFile;
 window.handleExcelDrop = handleExcelDrop;
 window.importExcelData = importExcelData;
 
-// Verhuur
 window.showAddVerhuurForm = showAddVerhuurForm;
 window.hideAddVerhuurForm = hideAddVerhuurForm;
 window.loadVerhuur = loadVerhuur;
@@ -3848,7 +3737,13 @@ window.deleteVerhuur = deleteVerhuur;
 window.filterVerhuur = filterVerhuur;
 window.resetVerhuurFilter = resetVerhuurFilter;
 
-// QR-code
+window.showAddOnderhoudForm = showAddOnderhoudForm;
+window.hideAddOnderhoudForm = hideAddOnderhoudForm;
+window.loadOnderhoud = loadOnderhoud;
+window.filterOnderhoud = filterOnderhoud;
+window.resetOnderhoudFilter = resetOnderhoudFilter;
+window.deleteOnderhoud = deleteOnderhoud;
+
 window.showQRCode = showQRCode;
 window.closeQRModal = closeQRModal;
 window.downloadQRCode = downloadQRCode;
