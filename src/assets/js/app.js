@@ -926,7 +926,7 @@ async function loadFietsen() {
         
         const { data, error } = await window.supabaseClient
             .from('individuele_fietsen')
-            .select('*, fiets_modellen (merk, model, kleur)')
+            .select('*, fiets_modellen (merk, model, kleur)')  // depot wordt automatisch meegenomen
             .order('aangemaakt_op', { ascending: false });
         
         if (error) throw error;
@@ -979,7 +979,7 @@ async function filterFietsen() {
     if (zoekTerm) {
         gefilterd = gefilterd.filter(function(fiets) {
             var modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
-            var zoekString = (fiets.serienummer + ' ' + modelInfo.merk + ' ' + modelInfo.model + ' ' + modelInfo.kleur).toLowerCase();
+            var zoekString = (fiets.serienummer + ' ' + modelInfo.merk + ' ' + modelInfo.model + ' ' + modelInfo.kleur + ' ' + (fiets.depot || '')).toLowerCase();
             return zoekString.includes(zoekTerm);
         });
     }
@@ -1022,6 +1022,7 @@ function toonFietsenLijst(data, footerText) {
                         <th>Model</th>
                         <th>Kleur</th>
                         <th>Status</th>
+                        <th>Depot</th>
                         <th style="text-align:center;">QR-code</th>
                         <th style="text-align:center;">Acties</th>
                     </tr>
@@ -1034,12 +1035,29 @@ function toonFietsenLijst(data, footerText) {
                            fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
         var modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
         
+        // Depot weergave met kleurcodering
+        var depotDisplay = '-';
+        var depotKleur = '#999';
+        if (fiets.depot) {
+            depotDisplay = fiets.depot;
+            if (fiets.depot.toLowerCase().includes('puurs') || fiets.depot.toLowerCase().includes('nektari')) {
+                depotKleur = '#007bff'; // Blauw voor Puurs
+            } else if (fiets.depot.toLowerCase().includes('gent') || fiets.depot.toLowerCase().includes('pantaclub')) {
+                depotKleur = '#28a745'; // Groen voor Gent
+            }
+        }
+        
         html += `
             <tr id="fiets-${fiets.id}">
                 <td><strong id="fiets-serie-${fiets.id}">${fiets.serienummer}</strong></td>
                 <td>${modelInfo.merk} ${modelInfo.model}</td>
                 <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;"></span> ${modelInfo.kleur}</td>
                 <td><span class="badge ${statusClass}" id="fiets-status-${fiets.id}">${fiets.status}</span></td>
+                <td>
+                    <span style="color:${depotKleur};font-weight:600;">
+                        ${depotDisplay}
+                    </span>
+                </td>
                 <td style="text-align:center;">
                     <button onclick="window.showQRCode('${fiets.serienummer}')" 
                             style="background:none;border:none;cursor:pointer;font-size:1.2rem;"
@@ -1090,6 +1108,11 @@ function editFiets(fietsId) {
     var statusCell = document.getElementById('fiets-status-' + fietsId);
     var huidigeStatus = statusCell ? statusCell.textContent.trim() : 'beschikbaar';
     
+    // Haal huidige depot op
+    var depotCell = row.querySelector('td:nth-child(5)');
+    var huidigDepot = depotCell ? depotCell.textContent.trim() : '';
+    if (huidigDepot === '-') huidigDepot = '';
+    
     if (serieCell) {
         serieCell.innerHTML = `
             <input type="text" id="edit-serie-${fietsId}" value="${huidigSerienummer}" 
@@ -1103,6 +1126,17 @@ function editFiets(fietsId) {
                 <option value="beschikbaar" ${huidigeStatus === 'beschikbaar' ? 'selected' : ''}>Beschikbaar</option>
                 <option value="verhuurd" ${huidigeStatus === 'verhuurd' ? 'selected' : ''}>Verhuurd</option>
                 <option value="in-onderhoud" ${huidigeStatus === 'in-onderhoud' ? 'selected' : ''}>In onderhoud</option>
+            </select>
+        `;
+    }
+    
+    // Vervang depot cel door een dropdown
+    if (depotCell) {
+        depotCell.innerHTML = `
+            <select id="edit-depot-${fietsId}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+                <option value="">-- Geen depot --</option>
+                <option value="Puurs - Nektari" ${huidigDepot === 'Puurs - Nektari' ? 'selected' : ''}>Puurs - Nektari</option>
+                <option value="Gent - PantaClub" ${huidigDepot === 'Gent - PantaClub' ? 'selected' : ''}>Gent - PantaClub</option>
             </select>
         `;
     }
@@ -1129,6 +1163,7 @@ async function saveFiets(fietsId) {
     
     var serieInput = document.getElementById('edit-serie-' + fietsId);
     var statusSelect = document.getElementById('edit-status-' + fietsId);
+    var depotSelect = document.getElementById('edit-depot-' + fietsId);
     
     if (!serieInput || !statusSelect) {
         showMessage('Fout: kan velden niet vinden.');
@@ -1137,6 +1172,7 @@ async function saveFiets(fietsId) {
     
     var serienummer = serieInput.value.trim();
     var status = statusSelect.value;
+    var depot = depotSelect ? depotSelect.value : null;
     
     if (!serienummer) {
         showMessage('❌ Serienummer is verplicht!');
@@ -1144,9 +1180,21 @@ async function saveFiets(fietsId) {
     }
     
     try {
+        var updateData = { 
+            serienummer: serienummer, 
+            status: status 
+        };
+        
+        // Alleen depot toevoegen als die bestaat en niet leeg is
+        if (depot && depot !== '') {
+            updateData.depot = depot;
+        } else {
+            updateData.depot = null;
+        }
+        
         const { error } = await window.supabaseClient
             .from('individuele_fietsen')
-            .update({ serienummer: serienummer, status: status })
+            .update(updateData)
             .eq('id', fietsId);
         
         if (error) throw error;
