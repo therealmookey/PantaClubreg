@@ -2842,7 +2842,7 @@ function toonVerhuurLijst(data, footerText) {
         
         var isActief = !verhuur.eind_datum;
         var statusClass = isActief ? 'badge-rented' : 'badge-available';
-        var statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+        var statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
         
         var startDatum = new Date(verhuur.start_datum);
         var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
@@ -3174,6 +3174,8 @@ async function loadVerhuurOptionsForFiets(fietsId) {
     }
 }
 async function handleOnderhoudSubmit(event) {
+    event.preventDefault();
+    
     var fietsId = document.getElementById('onderhoudFiets').value;
     var verhuurSelect = document.getElementById('onderhoudVerhuur').value;
     var type = document.getElementById('onderhoudType').value;
@@ -3187,7 +3189,7 @@ async function handleOnderhoudSubmit(event) {
     var originalText = button.textContent;
     
     if (!fietsId || !verhuurSelect || !type || !datum || !beschrijving) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fiets, klant, type, datum en beschrijving zijn verplicht!</p>';
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Alle verplichte velden moeten ingevuld zijn!</p>';
         return;
     }
     
@@ -3205,7 +3207,6 @@ async function handleOnderhoudSubmit(event) {
             status: 'afgerond'
         };
         
-        // Alleen verhuur_id toevoegen als er een echte verhuur is geselecteerd
         if (verhuurSelect !== 'geen_klant' && verhuurSelect !== '') {
             insertData.verhuur_id = verhuurSelect;
         }
@@ -3221,13 +3222,20 @@ async function handleOnderhoudSubmit(event) {
         if (error) throw error;
         
         messageDiv.innerHTML = '<p style="color: #28a745;">✅ Onderhoud succesvol geregistreerd!</p>';
-        document.getElementById('onderhoudForm').reset();
         
-        setTimeout(function() {
-            hideAddOnderhoudForm();
-            loadOnderhoud();
-            loadStats();
-        }, 2000);
+        // Reset en verberg formulier
+        document.getElementById('onderhoudForm').reset();
+        hideAddOnderhoudForm();
+        
+        // Herlaad de lijst
+        await loadOnderhoud();
+        await loadStats();
+        
+        // Scroll naar de lijst
+        var lijst = document.getElementById('onderhoudLijst');
+        if (lijst) {
+            lijst.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         
     } catch (error) {
         console.error('❌ Fout bij opslaan:', error);
