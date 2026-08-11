@@ -1640,7 +1640,7 @@ async function importFietsExcelData() {
                     status: fietsStatus,
                     huidige_klant_id: klantId || null,
                     opmerkingen: notities || null,
-                    aankoop_datum: aankoopDatum || null,
+                   // aankoop_datum: aankoopDatum || null,
                     qr_code: 'https://therealmookey.github.io/PantaClubreg/fiets/' + serienummer
                 }]);
             
