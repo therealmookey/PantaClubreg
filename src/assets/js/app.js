@@ -3366,7 +3366,11 @@ async function loadVerhuurOptionsForFiets(fietsId) {
 // ONDERHOUD BEWERKEN
 // ============================================
 
-function editOnderhoud(onderhoudId) {
+// ============================================
+// ONDERHOUD BEWERKEN
+// ============================================
+
+async function editOnderhoud(onderhoudId) {
     console.log('✏️ Bewerken van onderhoud:', onderhoudId);
     
     // Zoek het onderhoud in de data
