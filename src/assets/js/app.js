@@ -2807,7 +2807,7 @@ function toonVerhuurLijst(data, footerText) {
         
         var isActief = !verhuur.eind_datum;
         var statusClass = isActief ? 'badge-rented' : 'badge-available';
-        var statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+        var statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
         
         var startDatum = new Date(verhuur.start_datum);
         var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
