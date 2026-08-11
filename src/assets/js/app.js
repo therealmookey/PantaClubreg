@@ -1138,7 +1138,11 @@ function toonFietsenLijst(data, footerText) {
         
         html += `
             <tr id="fiets-${fiets.id}">
-                <td><strong id="fiets-serie-${fiets.id}">${fiets.serienummer}</strong></td>
+                <td>
+                    <a href="#" onclick="window.showFietsDetail('${fiets.id}')" style="color:#1A2B4C;text-decoration:none;font-weight:600;cursor:pointer;">
+                        ${fiets.serienummer}
+                    </a>
+                </td>
                 <td>${modelInfo.merk} ${modelInfo.model}</td>
                 <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${modelInfo.kleur.toLowerCase()};border:1px solid #ddd;vertical-align:middle;margin-right:5px;"></span> ${modelInfo.kleur}</td>
                 <td><span class="badge ${statusClass}" id="fiets-status-${fiets.id}">${fiets.status}</span></td>
@@ -1150,7 +1154,7 @@ function toonFietsenLijst(data, footerText) {
                         📱
                     </button>
                 </td>
-                <td style="text-align:center;">
+                <td style="text-align:center;white-space:nowrap;">
                     <button class="btn btn-sm btn-primary" onclick="window.editFiets('${fiets.id}')" style="margin-right:5px;">
                         ✏️ Bewerken
                     </button>
@@ -3360,7 +3364,10 @@ function toonOnderhoudLijst(data, footerText) {
                 <td><span class="badge badge-maintenance">${typeLabel}</span></td>
                 <td>${onderhoud.beschrijving}</td>
                 <td>${kost}</td>
-                <td style="text-align:center;">
+                <td style="text-align:center;white-space:nowrap;">
+                    <button class="btn btn-sm btn-primary" onclick="window.editOnderhoud('${onderhoud.id}')" style="margin-right:5px;">
+                        ✏️ Bewerken
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="window.deleteOnderhoud('${onderhoud.id}')">
                         🗑️ Verwijderen
                     </button>
@@ -3470,6 +3477,327 @@ async function deleteOnderhoud(onderhoudId) {
         
     } catch (error) {
         console.error('❌ Fout bij verwijderen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+// ============================================
+// ONDERHOUD BEWERKEN
+// ============================================
+
+function editOnderhoud(onderhoudId) {
+    console.log('✏️ Bewerken van onderhoud:', onderhoudId);
+    
+    // Zoek het onderhoud in de data
+    var onderhoud = alleOnderhoud.find(function(item) {
+        return item.id === onderhoudId;
+    });
+    
+    if (!onderhoud) {
+        showMessage('Onderhoud niet gevonden!');
+        return;
+    }
+    
+    // Toon het formulier en vul de velden
+    var form = document.getElementById('addOnderhoudForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Vul de velden met bestaande data
+    document.getElementById('onderhoudFiets').value = onderhoud.fiets_id;
+    document.getElementById('onderhoudType').value = onderhoud.type;
+    document.getElementById('onderhoudDatum').value = onderhoud.datum;
+    document.getElementById('onderhoudBeschrijving').value = onderhoud.beschrijving;
+    document.getElementById('onderhoudKost').value = onderhoud.kost || '';
+    document.getElementById('onderhoudUitgevoerdDoor').value = onderhoud.uitgevoerd_door || '';
+    
+    // Zet de verhuur selectie (als die er is)
+    var verhuurSelect = document.getElementById('onderhoudVerhuur');
+    if (onderhoud.verhuur_id) {
+        verhuurSelect.value = onderhoud.verhuur_id;
+    } else {
+        verhuurSelect.value = 'geen_klant';
+    }
+    
+    // Sla het ID op voor de update
+    document.getElementById('onderhoudForm').dataset.editId = onderhoudId;
+    
+    // Verander de knop tekst
+    var submitBtn = document.querySelector('#onderhoudForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.textContent = '💾 Update onderhoud';
+    }
+}
+
+async function updateOnderhoud(event) {
+    event.preventDefault();
+    
+    var onderhoudId = document.getElementById('onderhoudForm').dataset.editId;
+    if (!onderhoudId) {
+        // Als er geen editId is, voeg dan een nieuw onderhoud toe
+        await handleOnderhoudSubmit(event);
+        return;
+    }
+    
+    var fietsId = document.getElementById('onderhoudFiets').value;
+    var verhuurSelect = document.getElementById('onderhoudVerhuur').value;
+    var type = document.getElementById('onderhoudType').value;
+    var datum = document.getElementById('onderhoudDatum').value;
+    var beschrijving = document.getElementById('onderhoudBeschrijving').value.trim();
+    var kost = document.getElementById('onderhoudKost').value;
+    var uitgevoerdDoor = document.getElementById('onderhoudUitgevoerdDoor').value.trim();
+    
+    var messageDiv = document.getElementById('onderhoudFormMessage');
+    var button = event.target.querySelector('button[type="submit"]');
+    var originalText = button.textContent;
+    
+    if (!fietsId || !verhuurSelect || !type || !datum || !beschrijving) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Alle verplichte velden moeten ingevuld zijn!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met bijwerken...</p>';
+    
+    try {
+        var updateData = {
+            fiets_id: fietsId,
+            type: type,
+            datum: datum,
+            beschrijving: beschrijving,
+            uitgevoerd_door: uitgevoerdDoor || null,
+            status: 'afgerond'
+        };
+        
+        if (verhuurSelect !== 'geen_klant' && verhuurSelect !== '') {
+            updateData.verhuur_id = verhuurSelect;
+        } else {
+            updateData.verhuur_id = null;
+        }
+        
+        if (kost && kost !== '') {
+            updateData.kost = parseFloat(kost);
+        }
+        
+        var { error } = await window.supabaseClient
+            .from('onderhoud')
+            .update(updateData)
+            .eq('id', onderhoudId);
+        
+        if (error) throw error;
+        
+        messageDiv.innerHTML = '<p style="color: #28a745;">✅ Onderhoud succesvol bijgewerkt!</p>';
+        document.getElementById('onderhoudForm').reset();
+        document.getElementById('onderhoudForm').dataset.editId = '';
+        
+        var submitBtn = document.querySelector('#onderhoudForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = '💾 Opslaan';
+        }
+        
+        hideAddOnderhoudForm();
+        await loadOnderhoud();
+        await loadStats();
+        
+        var lijst = document.getElementById('onderhoudLijst');
+        if (lijst) {
+            lijst.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+    } catch (error) {
+        console.error('❌ Fout bij bijwerken:', error);
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout: ' + error.message + '</p>';
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// Pas de submit listener aan voor beide acties (toevoegen en bijwerken)
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'onderhoudForm') {
+        event.preventDefault();
+        var editId = document.getElementById('onderhoudForm').dataset.editId;
+        if (editId) {
+            await updateOnderhoud(event);
+        } else {
+            await handleOnderhoudSubmit(event);
+        }
+    }
+});
+// ============================================
+// FIETS DETAIL PAGINA
+// ============================================
+
+async function showFietsDetail(fietsId) {
+    console.log('📋 Detail van fiets:', fietsId);
+    
+    try {
+        // Haal fietsgegevens op
+        var { data: fiets, error: fietsError } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select('*, fiets_modellen (merk, model, kleur)')
+            .eq('id', fietsId)
+            .single();
+        
+        if (fietsError) throw fietsError;
+        
+        if (!fiets) {
+            showMessage('Fiets niet gevonden!');
+            return;
+        }
+        
+        var modelInfo = fiets.fiets_modellen || { merk: '-', model: '-', kleur: '-' };
+        
+        // Haal alle verhuur op voor deze fiets
+        var { data: verhuurData, error: verhuurError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select(`
+                *,
+                klanten (id, naam, email, telefoon)
+            `)
+            .eq('fiets_id', fietsId)
+            .order('start_datum', { ascending: false });
+        
+        if (verhuurError) throw verhuurError;
+        
+        // Haal alle onderhoud op voor deze fiets
+        var { data: onderhoudData, error: onderhoudError } = await window.supabaseClient
+            .from('onderhoud')
+            .select(`
+                *,
+                verhuur_historiek (
+                    id,
+                    start_datum,
+                    eind_datum,
+                    klanten (id, naam)
+                )
+            `)
+            .eq('fiets_id', fietsId)
+            .order('datum', { ascending: false });
+        
+        if (onderhoudError) throw onderhoudError;
+        
+        // Bouw de detail view
+        var statusClass = fiets.status === 'beschikbaar' ? 'badge-available' :
+                          fiets.status === 'verhuurd' ? 'badge-rented' : 'badge-maintenance';
+        
+        var html = `
+            <div style="padding: 20px 0;">
+                <button class="btn btn-outline" onclick="window.navigateTo('fietsen')" style="margin-bottom: 20px;">
+                    ⬅️ Terug naar fietsen
+                </button>
+                
+                <div class="card">
+                    <h1>🚲 ${fiets.serienummer}</h1>
+                    <p style="color: #666; margin-bottom: 10px;">
+                        ${modelInfo.merk} ${modelInfo.model} - ${modelInfo.kleur}
+                    </p>
+                    <p>
+                        Status: <span class="badge ${statusClass}">${fiets.status}</span>
+                        ${fiets.depot ? ' | 📦 Depot: <strong>' + fiets.depot + '</strong>' : ''}
+                    </p>
+                    ${fiets.opmerkingen ? '<p style="margin-top:5px;color:#666;">📝 ' + fiets.opmerkingen + '</p>' : ''}
+                </div>
+                
+                <h2 style="margin: 20px 0 10px 0;">📋 Verhuur geschiedenis</h2>
+                ${verhuurData && verhuurData.length > 0 ? `
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Klant</th>
+                                    <th>Start</th>
+                                    <th>Eind</th>
+                                    <th>Dagen</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${verhuurData.map(function(v) {
+                                    var klantInfo = v.klanten || { naam: 'Onbekend' };
+                                    var isActief = !v.eind_datum;
+                                    var start = new Date(v.start_datum);
+                                    var eind = v.eind_datum ? new Date(v.eind_datum) : new Date();
+                                    var dagen = Math.floor((eind - start) / (1000 * 60 * 60 * 24));
+                                    
+                                    return `
+                                        <tr>
+                                            <td><strong>${klantInfo.naam}</strong></td>
+                                            <td>${start.toLocaleDateString('nl-BE')}</td>
+                                            <td>${v.eind_datum ? eind.toLocaleDateString('nl-BE') : '-'}</td>
+                                            <td>${dagen} dagen</td>
+                                            <td><span class="badge ${isActief ? 'badge-rented' : 'badge-available'}">${isActief ? '🟢 Actief' : '🔴 Afgerond'}</span></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="color:#999;font-size:0.85rem;margin-top:5px;">Totaal: ${verhuurData.length} verhuurperiodes</p>
+                ` : `
+                    <div class="card" style="text-align:center;padding:20px;">
+                        <p style="color:#999;">Deze fiets heeft nog geen verhuur geschiedenis.</p>
+                    </div>
+                `}
+                
+                <h2 style="margin: 20px 0 10px 0;">🔧 Onderhoud geschiedenis</h2>
+                ${onderhoudData && onderhoudData.length > 0 ? `
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Type</th>
+                                    <th>Beschrijving</th>
+                                    <th>Klant</th>
+                                    <th>Kost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${onderhoudData.map(function(o) {
+                                    var verhuurInfo = o.verhuur_historiek || {};
+                                    var klantInfo = verhuurInfo.klanten || { naam: 'Geen klant' };
+                                    var klantNaam = 'Geen klant';
+                                    if (o.verhuur_id && klantInfo.naam && klantInfo.naam !== 'Onbekend') {
+                                        klantNaam = klantInfo.naam;
+                                    }
+                                    var typeLabels = {
+                                        'reparatie': '🔧 Reparatie',
+                                        'onderhoud': '🛠️ Onderhoud',
+                                        'inspectie': '🔍 Inspectie',
+                                        'schade': '💥 Schade',
+                                        'assemblage': '🔩 Assemblage',
+                                        'andere': '📌 Andere'
+                                    };
+                                    return `
+                                        <tr>
+                                            <td>${new Date(o.datum).toLocaleDateString('nl-BE')}</td>
+                                            <td>${typeLabels[o.type] || o.type}</td>
+                                            <td>${o.beschrijving}</td>
+                                            <td>${klantNaam}</td>
+                                            <td>${o.kost ? '€ ' + o.kost.toFixed(2) : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="color:#999;font-size:0.85rem;margin-top:5px;">Totaal: ${onderhoudData.length} onderhoudsbeurten</p>
+                ` : `
+                    <div class="card" style="text-align:center;padding:20px;">
+                        <p style="color:#999;">Deze fiets heeft nog geen onderhoudsbeurten.</p>
+                    </div>
+                `}
+            </div>
+        `;
+        
+        document.getElementById('content-wrapper').innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Fout bij laden fietsdetail:', error);
         showMessage('❌ Fout: ' + error.message);
     }
 }
@@ -3773,5 +4101,12 @@ window.deleteOnderhoud = deleteOnderhoud;
 window.showQRCode = showQRCode;
 window.closeQRModal = closeQRModal;
 window.downloadQRCode = downloadQRCode;
+
+// Onderhoud bewerken
+window.editOnderhoud = editOnderhoud;
+window.updateOnderhoud = updateOnderhoud;
+
+// Fiets detail
+window.showFietsDetail = showFietsDetail;
 
 console.log('✅ Applicatie klaar voor gebruik');
