@@ -86,7 +86,7 @@ const PAGES = {
                 <div class="card" style="text-align: center;">
                     <div style="font-size: 2.5rem; margin-bottom: 8px;">🔧</div>
                     <h3 style="font-size: 1.8rem; margin: 0;" id="stat-onderhoud">0</h3>
-                    <p style="color: #666; margin: 0;">Openstaand onderhoud</p>
+                    <p style="color: #666; margin: 0;">Onderhoudsbeurten</p>
                 </div>
             </div>
             
@@ -489,6 +489,7 @@ const PAGES = {
             <p style="color: #666; margin-bottom: 20px;">
                 Registreer en bekijk onderhoudsbeurten per fiets. 
                 Elke onderhoudsbeurt wordt gekoppeld aan de klant die de fiets op dat moment had.
+                <br><small style="color: #999;">Voor assemblage of algemeen onderhoud selecteer je "Geen klant".</small>
             </p>
             
             <button class="btn btn-accent" onclick="window.showAddOnderhoudForm()" style="margin-bottom: 20px;">
@@ -521,6 +522,7 @@ const PAGES = {
                                 <option value="onderhoud">🛠️ Onderhoud</option>
                                 <option value="inspectie">🔍 Inspectie</option>
                                 <option value="schade">💥 Schade</option>
+                                <option value="assemblage">🔩 Assemblage</option>
                                 <option value="andere">📌 Andere</option>
                             </select>
                         </div>
@@ -563,6 +565,7 @@ const PAGES = {
                     <option value="onderhoud">🛠️ Onderhoud</option>
                     <option value="inspectie">🔍 Inspectie</option>
                     <option value="schade">💥 Schade</option>
+                    <option value="assemblage">🔩 Assemblage</option>
                     <option value="andere">📌 Andere</option>
                 </select>
                 <button class="btn btn-primary" onclick="window.filterOnderhoud()">🔍 Zoeken</button>
@@ -1190,7 +1193,6 @@ function editFiets(fietsId) {
     var statusCell = document.getElementById('fiets-status-' + fietsId);
     var huidigeStatus = statusCell ? statusCell.textContent.trim() : 'beschikbaar';
     
-    // Depot ophalen
     var depotCell = row.querySelector('td:nth-child(5)');
     var huidigDepot = depotCell ? depotCell.textContent.trim() : '';
     if (huidigDepot === '-') huidigDepot = '';
@@ -1447,7 +1449,6 @@ function processFietsExcelFile(file) {
                 return;
             }
             
-            // Kolomnamen schoonmaken
             var cleanData = rawData.map(function(row) {
                 var cleanRow = {};
                 for (var key in row) {
@@ -2841,8 +2842,9 @@ function toonVerhuurLijst(data, footerText) {
         var klantInfo = verhuur.klanten || { naam: 'Onbekend' };
         
         var isActief = !verhuur.eind_datum;
+        // Groen voor actief, rood voor afgerond
         var statusClass = isActief ? 'badge-rented' : 'badge-available';
-        var statusText = isActief ? '🟢 Actief' : '✅ Afgerond';
+        var statusText = isActief ? '🟢 Actief' : '🔴 Afgerond';
         
         var startDatum = new Date(verhuur.start_datum);
         var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
@@ -3148,10 +3150,7 @@ async function loadVerhuurOptionsForFiets(fietsId) {
         
         if (error) throw error;
         
-        // Start met een lege select
         var html = '<option value="">-- Selecteer een verhuurperiode --</option>';
-        
-        // Voeg "Geen klant" optie toe
         html += '<option value="geen_klant">🔧 Geen klant (algemeen onderhoud)</option>';
         
         if (!data || data.length === 0) {
@@ -3173,6 +3172,14 @@ async function loadVerhuurOptionsForFiets(fietsId) {
         verhuurSelect.innerHTML = '<option value="">-- Fout bij laden --</option>';
     }
 }
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'onderhoudForm') {
+        event.preventDefault();
+        await handleOnderhoudSubmit(event);
+    }
+});
+
 async function handleOnderhoudSubmit(event) {
     event.preventDefault();
     
@@ -3189,7 +3196,7 @@ async function handleOnderhoudSubmit(event) {
     var originalText = button.textContent;
     
     if (!fietsId || !verhuurSelect || !type || !datum || !beschrijving) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Alle verplichte velden moeten ingevuld zijn!</p>';
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fiets, klant, type, datum en beschrijving zijn verplicht!</p>';
         return;
     }
     
@@ -3222,12 +3229,12 @@ async function handleOnderhoudSubmit(event) {
         if (error) throw error;
         
         messageDiv.innerHTML = '<p style="color: #28a745;">✅ Onderhoud succesvol geregistreerd!</p>';
-        
-        // Reset en verberg formulier
         document.getElementById('onderhoudForm').reset();
+        
+        // Verberg het formulier
         hideAddOnderhoudForm();
         
-        // Herlaad de lijst
+        // Herlaad de lijst en statistieken
         await loadOnderhoud();
         await loadStats();
         
@@ -3323,7 +3330,6 @@ function toonOnderhoudLijst(data, footerText) {
         var verhuurInfo = onderhoud.verhuur_historiek || {};
         var klantInfo = verhuurInfo.klanten || { naam: 'Geen klant' };
         
-        // Als er geen verhuur is gekoppeld (verhuur_id is null), toon "Geen klant (algemeen onderhoud)"
         var klantNaam = 'Geen klant (algemeen onderhoud)';
         if (onderhoud.verhuur_id && klantInfo.naam && klantInfo.naam !== 'Onbekend') {
             klantNaam = klantInfo.naam;
@@ -3335,15 +3341,15 @@ function toonOnderhoudLijst(data, footerText) {
             'onderhoud': '🛠️ Onderhoud',
             'inspectie': '🔍 Inspectie',
             'schade': '💥 Schade',
+            'assemblage': '🔩 Assemblage',
             'andere': '📌 Andere'
         };
         var typeLabel = typeLabels[onderhoud.type] || onderhoud.type;
         var kost = onderhoud.kost ? '€ ' + onderhoud.kost.toFixed(2) : '-';
         
-        // Kleur voor klant weergave
-        var klantKleur = '#28a745'; // Groen voor "Geen klant"
+        var klantKleur = '#28a745';
         if (onderhoud.verhuur_id && klantInfo.naam && klantInfo.naam !== 'Onbekend') {
-            klantKleur = '#1A2B4C'; // Donkerblauw voor echte klanten
+            klantKleur = '#1A2B4C';
         }
         
         html += `
