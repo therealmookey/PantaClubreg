@@ -171,6 +171,9 @@ const PAGES = {
                 <button class="btn btn-accent" onclick="window.showFietsExcelImport()">
                     📊 Importeer Excel (Stocklijst)
                 </button>
+                <button class="btn btn-primary" onclick="window.showDepotImport()">
+                    📦 Depot toewijzen
+                </button>
             </div>
             
             <!-- FIETS EXCEL IMPORT MODAL -->
@@ -207,6 +210,44 @@ const PAGES = {
                             💾 Importeer data
                         </button>
                         <button class="btn btn-outline" onclick="window.closeFietsExcelImport()">Annuleren</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DEPOT IMPORT MODAL -->
+            <div id="depotImportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+                <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>📦 Depot toewijzen</h3>
+                        <button onclick="window.closeDepotImport()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✕</button>
+                    </div>
+                    
+                    <p style="color: #666; margin-bottom: 15px;">
+                        Upload een Excel bestand met serienummers en depot toewijzing.
+                        <br><small style="color: #999;">Kolommen: Serienummer, Puurs - Nektari (TRUE/FALSE), Gent - PantaClub (TRUE/FALSE)</small>
+                        <br><small style="color: #999;">De depot wordt bepaald op basis van welke kolom TRUE is.</small>
+                    </p>
+                    
+                    <div style="border: 2px dashed #E0DCD6; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer;" 
+                         ondrop="window.handleDepotDrop(event)" ondragover="event.preventDefault()" onclick="document.getElementById('depotFileInput').click()">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">📁</div>
+                        <p><strong>Klik hier</strong> of sleep een Excel bestand naar dit vak</p>
+                        <p style="color: #999; font-size: 0.85rem;">Ondersteunt .xlsx en .xls</p>
+                        <input type="file" id="depotFileInput" accept=".xlsx,.xls" style="display: none;" onchange="window.handleDepotFile(event)">
+                    </div>
+                    
+                    <div id="depotPreview" style="display: none; margin-bottom: 20px;">
+                        <h4>📋 Voorbeeld van de data</h4>
+                        <div id="depotPreviewContent" style="overflow-x: auto; max-height: 300px; border: 1px solid #E0DCD6; border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                    
+                    <div id="depotImportStatus" style="margin-bottom: 15px;"></div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="depotImportBtn" class="btn btn-accent" onclick="window.importDepotData()" style="display: none;">
+                            💾 Update depots
+                        </button>
+                        <button class="btn btn-outline" onclick="window.closeDepotImport()">Annuleren</button>
                     </div>
                 </div>
             </div>
@@ -1210,7 +1251,7 @@ async function handleFietsSubmit(event) {
 }
 
 // ============================================
-// FIETSEN EXCEL IMPORT
+// FIETSEN EXCEL IMPORT (STOCKLIJST)
 // ============================================
 
 var fietsExcelData = [];
@@ -1377,18 +1418,14 @@ async function importFietsExcelData() {
     var matchedModels = [];
     
     try {
-        // ============================================
         // HAAL ALLE BESTAANDE MODELLEN OP
-        // ============================================
         const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*');
         
         if (modellenError) throw modellenError;
         
-        // ============================================
         // HAAL ALLE BESTAANDE FIETSEN OP (VOOR DUPLICATE CHECK)
-        // ============================================
         const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('serienummer');
@@ -1397,20 +1434,15 @@ async function importFietsExcelData() {
         
         var bestaandeSerienummers = new Set(bestaandeFietsen.map(function(f) { return f.serienummer; }));
         
-        // ============================================
         // HAAL ALLE KLANTEN OP (VOOR KOPPELING)
-        // ============================================
         const { data: alleKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('id, naam');
         
         if (klantenError) throw klantenError;
         
-        // ============================================
         // MAP VOOR UNIEKE MODELLEN (VERMIJD DUPLICATEN)
-        // ============================================
         var modelCache = {};
-        var modelIdMap = {};
         
         // Bouw een cache van bestaande modellen op basis van "merk|model|kleur"
         bestaandeModellen.forEach(function(model) {
@@ -1421,9 +1453,7 @@ async function importFietsExcelData() {
         for (var i = 0; i < fietsExcelData.length; i++) {
             var row = fietsExcelData[i];
             
-            // ============================================
             // 1. SERIENUMMER
-            // ============================================
             var serienummer = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1448,9 +1478,7 @@ async function importFietsExcelData() {
                 continue;
             }
             
-            // ============================================
             // 2. TYPE/MODEL
-            // ============================================
             var type = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1463,9 +1491,7 @@ async function importFietsExcelData() {
                 }
             }
             
-            // ============================================
             // 3. KLEUR
-            // ============================================
             var kleur = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1478,14 +1504,11 @@ async function importFietsExcelData() {
                 }
             }
             
-            // ============================================
             // 4. MERK
-            // ============================================
             var merk = 'WOOM';
             if (type) {
                 var typeParts = type.split(' ');
                 if (typeParts.length > 0 && typeParts[0].length > 0) {
-                    // Controleer of het eerste deel een merk is (WOOM, Panta, etc.)
                     var possibleMerk = typeParts[0].toUpperCase();
                     if (possibleMerk === 'WOOM' || possibleMerk === 'PANTA' || possibleMerk === 'CUBE' || possibleMerk === 'SCOTT') {
                         merk = possibleMerk;
@@ -1493,18 +1516,14 @@ async function importFietsExcelData() {
                 }
             }
             
-            // ============================================
             // 5. MODEL ID - CHECK OF MODEL AL BESTAAT
-            // ============================================
             var modelKey = (merk + '|' + type + '|' + (kleur || '')).toLowerCase();
             var modelId = null;
             
-            // Kijk of het model al in de cache zit
             if (modelCache[modelKey]) {
                 modelId = modelCache[modelKey];
                 matchedModels.push(merk + ' - ' + type + ' (' + (kleur || 'Onbekend') + ')');
             } else if (type) {
-                // Model bestaat nog niet, maak een nieuwe aan
                 var modelKleur = kleur || 'Onbekend';
                 const { data: newModel, error: newModelError } = await window.supabaseClient
                     .from('fiets_modellen')
@@ -1521,7 +1540,6 @@ async function importFietsExcelData() {
                     continue;
                 }
                 modelId = newModel[0].id;
-                // Sla het nieuwe model op in de cache
                 modelCache[modelKey] = modelId;
                 newModels.push(merk + ' - ' + type + ' (' + modelKleur + ')');
             } else {
@@ -1530,9 +1548,7 @@ async function importFietsExcelData() {
                 continue;
             }
             
-            // ============================================
             // 6. STATUS
-            // ============================================
             var statusRaw = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1552,9 +1568,7 @@ async function importFietsExcelData() {
                 fietsStatus = 'in-onderhoud';
             }
             
-            // ============================================
             // 7. KLANT KOPPELING
-            // ============================================
             var klantId = null;
             var klantNaam = null;
             for (var key in row) {
@@ -1578,9 +1592,7 @@ async function importFietsExcelData() {
                 }
             }
             
-            // ============================================
             // 8. NOTITIES
-            // ============================================
             var notities = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1609,29 +1621,7 @@ async function importFietsExcelData() {
                 notities = notities ? notities + ' | Oorsprong: ' + oorsprongSerie : 'Oorsprong: ' + oorsprongSerie;
             }
             
-            // ============================================
-            // 9. AANKOOP DATUM
-            // ============================================
-            var aankoopDatum = null;
-            for (var key in row) {
-                if (row.hasOwnProperty(key)) {
-                    if (key.toLowerCase().includes('aangekocht') || key.toLowerCase().includes('aankoop') || key.toLowerCase().includes('datum')) {
-                        if (row[key] && row[key] !== '') {
-                            try {
-                                var datum = new Date(row[key]);
-                                if (!isNaN(datum)) {
-                                    aankoopDatum = datum.toISOString().split('T')[0];
-                                }
-                            } catch (e) {}
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // ============================================
-            // 10. FIETS OPSLAAN
-            // ============================================
+            // 9. FIETS OPSLAAN (zonder aankoop_datum)
             const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .insert([{
@@ -1639,9 +1629,7 @@ async function importFietsExcelData() {
                     model_id: modelId,
                     status: fietsStatus,
                     huidige_klant_id: klantId || null,
-                    opmerkingen: notities || null,
-                   // aankoop_datum: aankoopDatum || null,
-                    qr_code: 'https://therealmookey.github.io/PantaClubreg/fiets/' + serienummer
+                    opmerkingen: notities || null
                 }]);
             
             if (fietsError) {
@@ -1653,13 +1641,10 @@ async function importFietsExcelData() {
             }
         }
         
-        // ============================================
         // RESULTAAT TONEN
-        // ============================================
         var resultMessage = '✅ ' + successCount + ' fietsen succesvol geïmporteerd.';
         if (newModels.length > 0) {
             resultMessage += '\n📦 Nieuwe modellen aangemaakt: ' + newModels.length;
-            // Toon welke modellen zijn aangemaakt
             resultMessage += '\n   ' + newModels.slice(0, 5).join(', ') + (newModels.length > 5 ? '... en ' + (newModels.length - 5) + ' meer' : '');
         }
         if (matchedModels.length > 0) {
@@ -1688,6 +1673,298 @@ async function importFietsExcelData() {
     } finally {
         importBtn.disabled = false;
         importBtn.textContent = '💾 Importeer data';
+    }
+}
+
+// ============================================
+// DEPOT IMPORT (TRUE/FALSE)
+// ============================================
+
+var depotExcelData = [];
+var depotExcelHeaders = [];
+
+function showDepotImport() {
+    var modal = document.getElementById('depotImportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    document.getElementById('depotImportStatus').innerHTML = '';
+    document.getElementById('depotPreview').style.display = 'none';
+    document.getElementById('depotImportBtn').style.display = 'none';
+    depotExcelData = [];
+    depotExcelHeaders = [];
+}
+
+function closeDepotImport() {
+    var modal = document.getElementById('depotImportModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('depotFileInput').value = '';
+}
+
+function handleDepotFile(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    processDepotFile(file);
+}
+
+function handleDepotDrop(event) {
+    event.preventDefault();
+    var file = event.dataTransfer.files[0];
+    if (!file) return;
+    processDepotFile(file);
+}
+
+function processDepotFile(file) {
+    var reader = new FileReader();
+    var statusDiv = document.getElementById('depotImportStatus');
+    
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bestand wordt gelezen...</p>';
+    
+    reader.onload = function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            var jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            if (!jsonData || jsonData.length === 0) {
+                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Geen data gevonden in het bestand.</p>';
+                return;
+            }
+            
+            depotExcelHeaders = Object.keys(jsonData[0]);
+            depotExcelData = jsonData;
+            
+            showDepotPreview(jsonData);
+            
+            statusDiv.innerHTML = `
+                <p style="color: #28a745;">✅ ${jsonData.length} rijen gevonden.</p>
+                <p style="color: #666; font-size:0.85rem;">Kolommen: ${depotExcelHeaders.join(', ')}</p>
+            `;
+            
+            document.getElementById('depotImportBtn').style.display = 'inline-block';
+            
+        } catch (error) {
+            console.error('❌ Fout bij lezen Excel:', error);
+            statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout bij lezen: ' + error.message + '</p>';
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+function showDepotPreview(data) {
+    var previewDiv = document.getElementById('depotPreview');
+    var contentDiv = document.getElementById('depotPreviewContent');
+    
+    if (!previewDiv || !contentDiv) return;
+    
+    var previewData = data.slice(0, 10);
+    
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+    html += '<thead><tr style="background:#1A2B4C;color:white;">';
+    depotExcelHeaders.forEach(function(header) {
+        html += '<th style="padding:8px 12px;text-align:left;white-space:nowrap;">' + header + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    
+    previewData.forEach(function(row) {
+        html += '<tr>';
+        depotExcelHeaders.forEach(function(header) {
+            var value = row[header] || '';
+            html += '<td style="padding:6px 12px;border-bottom:1px solid #eee;">' + value + '</td>';
+        });
+        html += '</tr>';
+    });
+    
+    if (data.length > 10) {
+        html += '<tr><td colspan="' + depotExcelHeaders.length + '" style="padding:8px 12px;color:#999;font-style:italic;">... en ' + (data.length - 10) + ' rijen meer</td></tr>';
+    }
+    
+    html += '</tbody></table>';
+    contentDiv.innerHTML = html;
+    previewDiv.style.display = 'block';
+}
+
+async function importDepotData() {
+    if (!depotExcelData || depotExcelData.length === 0) {
+        alert('❌ Geen data om te importeren.');
+        return;
+    }
+    
+    var statusDiv = document.getElementById('depotImportStatus');
+    var importBtn = document.getElementById('depotImportBtn');
+    
+    console.log('📋 Kolommen voor import:', depotExcelHeaders);
+    
+    if (!confirm('Weet je zeker dat je de depot-informatie voor ' + depotExcelData.length + ' fietsen wilt bijwerken?')) {
+        return;
+    }
+    
+    importBtn.disabled = true;
+    importBtn.textContent = '⏳ Bezig...';
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met bijwerken...</p>';
+    
+    var successCount = 0;
+    var errorCount = 0;
+    var errors = [];
+    var notFoundCount = 0;
+    var skippedCount = 0;
+    
+    try {
+        for (var i = 0; i < depotExcelData.length; i++) {
+            var row = depotExcelData[i];
+            
+            // ============================================
+            // 1. SERIENUMMER VINDEN
+            // ============================================
+            var serienummer = null;
+            for (var key in row) {
+                if (row.hasOwnProperty(key)) {
+                    if (key.toLowerCase().includes('serienummer') || key.toLowerCase().includes('serie')) {
+                        if (row[key] && row[key] !== '') {
+                            serienummer = String(row[key]).trim();
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!serienummer) {
+                errorCount++;
+                errors.push('Rij ' + (i + 1) + ': Geen serienummer gevonden');
+                continue;
+            }
+            
+            // ============================================
+            // 2. DEPOT BEPALEN (TRUE/FALSE)
+            // ============================================
+            var depot = null;
+            var depotKolom = null;
+            
+            for (var key in row) {
+                if (row.hasOwnProperty(key)) {
+                    var keyLower = key.toLowerCase();
+                    // Check of de waarde TRUE is (zowel boolean als string)
+                    var isTrue = false;
+                    if (typeof row[key] === 'boolean') {
+                        isTrue = row[key] === true;
+                    } else if (typeof row[key] === 'string') {
+                        isTrue = row[key].toLowerCase().trim() === 'true';
+                    }
+                    
+                    // Als de waarde TRUE is en de kolomnaam lijkt op een depot
+                    if (isTrue) {
+                        if (keyLower.includes('puurs') || keyLower.includes('nektari')) {
+                            depot = 'Puurs - Nektari';
+                            depotKolom = key;
+                            break;
+                        } else if (keyLower.includes('gent') || keyLower.includes('pantaclub')) {
+                            depot = 'Gent - PantaClub';
+                            depotKolom = key;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Als geen depot gevonden is, sla deze rij over
+            if (!depot) {
+                skippedCount++;
+                errors.push('Rij ' + (i + 1) + ': Geen depot gevonden (geen TRUE waarde)');
+                continue;
+            }
+            
+            console.log('🔍 Rij ' + (i + 1) + ': Serienummer ' + serienummer + ' → Depot: ' + depot + ' (kolom: ' + depotKolom + ')');
+            
+            // ============================================
+            // 3. ZOEK DE FIETS IN DE DATABASE
+            // ============================================
+            const { data: fietsData, error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .select('id, serienummer, opmerkingen')
+                .eq('serienummer', serienummer);
+            
+            if (fietsError) {
+                errorCount++;
+                errors.push('Rij ' + (i + 1) + ': Fout bij zoeken: ' + fietsError.message);
+                continue;
+            }
+            
+            if (!fietsData || fietsData.length === 0) {
+                notFoundCount++;
+                errors.push('Rij ' + (i + 1) + ': Serienummer ' + serienummer + ' niet gevonden in database');
+                continue;
+            }
+            
+            var fiets = fietsData[0];
+            
+            // ============================================
+            // 4. UPDATE DE FIETS MET DEPOT
+            // ============================================
+            var huidigeOpmerkingen = fiets.opmerkingen || '';
+            var nieuweOpmerkingen = huidigeOpmerkingen;
+            
+            // Verwijder bestaande depot info (als die er is)
+            nieuweOpmerkingen = nieuweOpmerkingen.replace(/\s*\|\s*Depot:[^|]*/i, '');
+            nieuweOpmerkingen = nieuweOpmerkingen.replace(/Depot:[^|]*\s*\|\s*/i, '');
+            
+            // Voeg nieuwe depot toe
+            if (nieuweOpmerkingen.trim()) {
+                nieuweOpmerkingen = nieuweOpmerkingen.trim() + ' | Depot: ' + depot;
+            } else {
+                nieuweOpmerkingen = 'Depot: ' + depot;
+            }
+            
+            // Update de fiets
+            const { error: updateError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .update({ 
+                    opmerkingen: nieuweOpmerkingen
+                })
+                .eq('id', fiets.id);
+            
+            if (updateError) {
+                errorCount++;
+                errors.push('Rij ' + (i + 1) + ': Fout bij updaten: ' + updateError.message);
+                continue;
+            }
+            
+            successCount++;
+        }
+        
+        var resultMessage = '✅ ' + successCount + ' fietsen succesvol bijgewerkt met depot.';
+        if (notFoundCount > 0) {
+            resultMessage += '\n⚠️ ' + notFoundCount + ' serienummers niet gevonden in database.';
+        }
+        if (skippedCount > 0) {
+            resultMessage += '\n⏭️ ' + skippedCount + ' rijen overgeslagen (geen TRUE waarde).';
+        }
+        if (errorCount > 0) {
+            resultMessage += '\n⚠️ ' + errorCount + ' fouten: ' + errors.slice(0, 5).join('; ') + (errors.length > 5 ? '... en ' + (errors.length - 5) + ' meer' : '');
+        }
+        
+        statusDiv.innerHTML = '<p style="color: ' + (errorCount > 0 && successCount === 0 ? '#dc3545' : errorCount > 0 ? '#ffc107' : '#28a745') + ';">' + resultMessage + '</p>';
+        
+        if (successCount > 0) {
+            loadFietsen();
+            loadStats();
+        }
+        
+        if (errorCount === 0 && notFoundCount === 0 && skippedCount === 0) {
+            setTimeout(function() {
+                closeDepotImport();
+            }, 3000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Fout bij importeren:', error);
+        statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout: ' + error.message + '</p>';
+    } finally {
+        importBtn.disabled = false;
+        importBtn.textContent = '💾 Update depots';
     }
 }
 
@@ -2997,6 +3274,13 @@ window.closeFietsExcelImport = closeFietsExcelImport;
 window.handleFietsExcelFile = handleFietsExcelFile;
 window.handleFietsExcelDrop = handleFietsExcelDrop;
 window.importFietsExcelData = importFietsExcelData;
+
+// Depot Import
+window.showDepotImport = showDepotImport;
+window.closeDepotImport = closeDepotImport;
+window.handleDepotFile = handleDepotFile;
+window.handleDepotDrop = handleDepotDrop;
+window.importDepotData = importDepotData;
 
 // Klanten
 window.showAddKlantForm = showAddKlantForm;
