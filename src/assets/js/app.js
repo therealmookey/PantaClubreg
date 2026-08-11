@@ -3148,39 +3148,34 @@ async function loadVerhuurOptionsForFiets(fietsId) {
         
         if (error) throw error;
         
+        // Start met een lege select
+        var html = '<option value="">-- Selecteer een verhuurperiode --</option>';
+        
+        // Voeg "Geen klant" optie toe
+        html += '<option value="geen_klant">🔧 Geen klant (algemeen onderhoud)</option>';
+        
         if (!data || data.length === 0) {
-            verhuurSelect.innerHTML = '<option value="">-- Geen verhuur gevonden voor deze fiets --</option>';
-            return;
+            html += '<option value="" disabled>-- Geen verhuur gevonden voor deze fiets --</option>';
+        } else {
+            data.forEach(function(verhuur) {
+                var klantInfo = verhuur.klanten || { naam: 'Onbekend' };
+                var startDatum = new Date(verhuur.start_datum).toLocaleDateString('nl-BE');
+                var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum).toLocaleDateString('nl-BE') : 'huidig';
+                var label = klantInfo.naam + ' (' + startDatum + ' → ' + eindDatum + ')';
+                html += '<option value="' + verhuur.id + '">' + label + '</option>';
+            });
         }
         
-        verhuurSelect.innerHTML = '<option value="">-- Selecteer een verhuurperiode --</option>';
-        data.forEach(function(verhuur) {
-            var klantInfo = verhuur.klanten || { naam: 'Onbekend' };
-            var startDatum = new Date(verhuur.start_datum).toLocaleDateString('nl-BE');
-            var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum).toLocaleDateString('nl-BE') : 'huidig';
-            var label = klantInfo.naam + ' (' + startDatum + ' → ' + eindDatum + ')';
-            var option = document.createElement('option');
-            option.value = verhuur.id;
-            option.textContent = label;
-            verhuurSelect.appendChild(option);
-        });
+        verhuurSelect.innerHTML = html;
         
     } catch (error) {
         console.error('❌ Fout bij laden verhuur:', error);
         verhuurSelect.innerHTML = '<option value="">-- Fout bij laden --</option>';
     }
 }
-
-document.addEventListener('submit', async function(event) {
-    if (event.target.id === 'onderhoudForm') {
-        event.preventDefault();
-        await handleOnderhoudSubmit(event);
-    }
-});
-
 async function handleOnderhoudSubmit(event) {
     var fietsId = document.getElementById('onderhoudFiets').value;
-    var verhuurId = document.getElementById('onderhoudVerhuur').value;
+    var verhuurSelect = document.getElementById('onderhoudVerhuur').value;
     var type = document.getElementById('onderhoudType').value;
     var datum = document.getElementById('onderhoudDatum').value;
     var beschrijving = document.getElementById('onderhoudBeschrijving').value.trim();
@@ -3191,7 +3186,7 @@ async function handleOnderhoudSubmit(event) {
     var button = event.target.querySelector('button[type="submit"]');
     var originalText = button.textContent;
     
-    if (!fietsId || !verhuurId || !type || !datum || !beschrijving) {
+    if (!fietsId || !verhuurSelect || !type || !datum || !beschrijving) {
         messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fiets, klant, type, datum en beschrijving zijn verplicht!</p>';
         return;
     }
@@ -3203,13 +3198,17 @@ async function handleOnderhoudSubmit(event) {
     try {
         var insertData = {
             fiets_id: fietsId,
-            verhuur_id: verhuurId,
             type: type,
             datum: datum,
             beschrijving: beschrijving,
             uitgevoerd_door: uitgevoerdDoor || null,
             status: 'afgerond'
         };
+        
+        // Alleen verhuur_id toevoegen als er een echte verhuur is geselecteerd
+        if (verhuurSelect !== 'geen_klant' && verhuurSelect !== '') {
+            insertData.verhuur_id = verhuurSelect;
+        }
         
         if (kost && kost !== '') {
             insertData.kost = parseFloat(kost);
@@ -3314,7 +3313,13 @@ function toonOnderhoudLijst(data, footerText) {
         var fietsInfo = onderhoud.individuele_fietsen || { serienummer: 'Onbekend', fiets_modellen: { merk: '', model: '', kleur: '' } };
         var modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '', kleur: '' };
         var verhuurInfo = onderhoud.verhuur_historiek || {};
-        var klantInfo = verhuurInfo.klanten || { naam: 'Onbekend' };
+        var klantInfo = verhuurInfo.klanten || { naam: 'Geen klant' };
+        
+        // Als er geen verhuur is gekoppeld (verhuur_id is null), toon "Geen klant (algemeen onderhoud)"
+        var klantNaam = 'Geen klant (algemeen onderhoud)';
+        if (onderhoud.verhuur_id && klantInfo.naam && klantInfo.naam !== 'Onbekend') {
+            klantNaam = klantInfo.naam;
+        }
         
         var datum = new Date(onderhoud.datum).toLocaleDateString('nl-BE');
         var typeLabels = {
@@ -3327,11 +3332,17 @@ function toonOnderhoudLijst(data, footerText) {
         var typeLabel = typeLabels[onderhoud.type] || onderhoud.type;
         var kost = onderhoud.kost ? '€ ' + onderhoud.kost.toFixed(2) : '-';
         
+        // Kleur voor klant weergave
+        var klantKleur = '#28a745'; // Groen voor "Geen klant"
+        if (onderhoud.verhuur_id && klantInfo.naam && klantInfo.naam !== 'Onbekend') {
+            klantKleur = '#1A2B4C'; // Donkerblauw voor echte klanten
+        }
+        
         html += `
             <tr id="onderhoud-${onderhoud.id}">
                 <td>${datum}</td>
                 <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
-                <td>${klantInfo.naam}</td>
+                <td><span style="color:${klantKleur};font-weight:600;">${klantNaam}</span></td>
                 <td><span class="badge badge-maintenance">${typeLabel}</span></td>
                 <td>${onderhoud.beschrijving}</td>
                 <td>${kost}</td>
@@ -3392,7 +3403,8 @@ async function filterOnderhoud() {
     if (zoekTerm) {
         gefilterd = gefilterd.filter(function(item) {
             var fietsInfo = item.individuele_fietsen || { serienummer: '' };
-            var klantInfo = (item.verhuur_historiek || {}).klanten || { naam: '' };
+            var verhuurInfo = item.verhuur_historiek || {};
+            var klantInfo = verhuurInfo.klanten || { naam: 'Geen klant' };
             var zoekString = (fietsInfo.serienummer + ' ' + item.beschrijving + ' ' + klantInfo.naam).toLowerCase();
             return zoekString.includes(zoekTerm);
         });
