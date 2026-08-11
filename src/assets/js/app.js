@@ -712,7 +712,7 @@ async function saveModel(modelId) {
     }
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('fiets_modellen')
             .update({ merk: merk, model: model, kleur: kleur })
             .eq('id', modelId);
@@ -749,7 +749,7 @@ async function deleteModel(modelId) {
     }
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('fiets_modellen')
             .delete()
             .eq('id', modelId);
@@ -800,7 +800,7 @@ async function handleModelSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('fiets_modellen')
             .insert([{ merk: merk, model: model, kleur: kleur }]);
         
@@ -853,7 +853,7 @@ async function loadModelSelectOptions() {
     if (!select) return;
     
     try {
-        var { data, error } = await window.supabaseClient
+        const { data, error } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*')
             .order('merk', { ascending: true });
@@ -883,7 +883,7 @@ async function loadFietsen() {
             return;
         }
         
-        var { data, error } = await window.supabaseClient
+        const { data, error } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('*, fiets_modellen (merk, model, kleur)')
             .order('aangemaakt_op', { ascending: false });
@@ -919,7 +919,7 @@ async function filterFietsen() {
     
     if (alleFietsen.length === 0) {
         try {
-            var { data, error } = await window.supabaseClient
+            const { data, error } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .select('*, fiets_modellen (merk, model, kleur)')
                 .order('aangemaakt_op', { ascending: false });
@@ -1103,7 +1103,7 @@ async function saveFiets(fietsId) {
     }
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .update({ serienummer: serienummer, status: status })
             .eq('id', fietsId);
@@ -1132,7 +1132,7 @@ async function deleteFiets(fietsId) {
     }
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .delete()
             .eq('id', fietsId);
@@ -1183,7 +1183,7 @@ async function handleFietsSubmit(event) {
     messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
     
     try {
-        var { error } = await window.supabaseClient
+        const { error } = await window.supabaseClient
             .from('individuele_fietsen')
             .insert([{
                 serienummer: serienummer,
@@ -1377,13 +1377,13 @@ async function importFietsExcelData() {
     var matchedModels = [];
     
     try {
-        var { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
+        const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*');
         
         if (modellenError) throw modellenError;
         
-        var { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
+        const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('serienummer');
         
@@ -1391,7 +1391,7 @@ async function importFietsExcelData() {
         
         var bestaandeSerienummers = new Set(bestaandeFietsen.map(function(f) { return f.serienummer; }));
         
-        var { data: alleKlanten, error: klantenError } = await window.supabaseClient
+        const { data: alleKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('id, naam');
         
@@ -1475,7 +1475,7 @@ async function importFietsExcelData() {
                     matchedModels.push(merk + ' - ' + type + ' (' + (kleur || 'Onbekend') + ')');
                 } else {
                     var modelKleur = kleur || 'Onbekend';
-                    var { data: newModel, error: newModelError } = await window.supabaseClient
+                    const { data: newModel, error: newModelError } = await window.supabaseClient
                         .from('fiets_modellen')
                         .insert([{ 
                             merk: merk, 
@@ -1590,7 +1590,7 @@ async function importFietsExcelData() {
             }
             
             // 10. FIETS OPSLAAN
-            var { error: fietsError } = await window.supabaseClient
+            const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .insert([{
                     serienummer: serienummer,
@@ -1648,10 +1648,1271 @@ async function importFietsExcelData() {
 // KLANTEN FUNCTIES
 // ============================================
 
-// De rest van de code blijft hetzelfde, maar we moeten de exports toevoegen
-// Zodat de functies beschikbaar zijn in de browser.
+var alleKlanten = [];
 
-console.log('✅ Applicatie klaar voor gebruik');
+function showAddKlantForm() {
+    var form = document.getElementById('addKlantForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function hideAddKlantForm() {
+    var form = document.getElementById('addKlantForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+    var message = document.getElementById('klantFormMessage');
+    if (message) {
+        message.innerHTML = '';
+    }
+    var formElement = document.getElementById('klantForm');
+    if (formElement) {
+        formElement.reset();
+    }
+}
+
+async function loadKlanten() {
+    console.log('📥 Laden van klanten...');
+    alleKlanten = [];
+    
+    var lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>';
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('klanten')
+            .select('*')
+            .order('naam', { ascending: true });
+        
+        if (error) throw error;
+        
+        alleKlanten = data || [];
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
+                    <h3>Geen klanten gevonden</h3>
+                    <p style="color: #999;">Voeg je eerste klant toe met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonKlantenLijst(data);
+    } catch (error) {
+        console.error('❌ Fout bij laden klanten:', error);
+        lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>';
+    }
+}
+
+async function filterKlanten() {
+    var zoekTerm = document.getElementById('klantZoekInput').value.toLowerCase().trim();
+    var lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    if (alleKlanten.length === 0) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('klanten')
+                .select('*')
+                .order('naam', { ascending: true });
+            
+            if (error) throw error;
+            alleKlanten = data || [];
+        } catch (error) {
+            console.error('❌ Fout bij laden:', error);
+            lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>';
+            return;
+        }
+    }
+    
+    var gefilterd = alleKlanten;
+    
+    if (zoekTerm) {
+        gefilterd = gefilterd.filter(function(klant) {
+            var zoekString = (klant.naam + ' ' + (klant.email || '') + ' ' + (klant.telefoon || '') + ' ' + (klant.adres || '')).toLowerCase();
+            return zoekString.includes(zoekTerm);
+        });
+    }
+    
+    if (gefilterd.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen klanten gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    toonKlantenLijst(gefilterd, 'Totaal: ' + gefilterd.length + ' klanten (gefilterd)');
+}
+
+function resetKlantFilter() {
+    document.getElementById('klantZoekInput').value = '';
+    alleKlanten = [];
+    loadKlanten();
+}
+
+function toonKlantenLijst(data, footerText) {
+    var lijst = document.getElementById('klantenLijst');
+    if (!lijst) return;
+    
+    var html = `
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>E-mail</th>
+                        <th>Telefoon</th>
+                        <th>Adres</th>
+                        <th style="text-align:center;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.forEach(function(klant) {
+        html += `
+            <tr id="klant-${klant.id}">
+                <td><strong>${klant.naam}</strong></td>
+                <td>${klant.email || '-'}</td>
+                <td>${klant.telefoon || '-'}</td>
+                <td>${klant.adres || '-'}</td>
+                <td style="text-align:center;">
+                    <button class="btn btn-sm btn-primary" onclick="window.editKlant('${klant.id}')" style="margin-right:5px;">
+                        ✏️ Bewerken
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="window.deleteKlant('${klant.id}')">
+                        🗑️ Verwijderen
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+            ${footerText || 'Totaal: ' + data.length + ' klanten'}
+        </p>
+    `;
+    
+    lijst.innerHTML = html;
+}
+
+// ============================================
+// KLANT BEWERKEN
+// ============================================
+
+function editKlant(klantId) {
+    console.log('✏️ Bewerken van klant:', klantId);
+    
+    var row = document.getElementById('klant-' + klantId);
+    if (!row) {
+        showMessage('Klant niet gevonden!');
+        return;
+    }
+    
+    var cells = row.querySelectorAll('td');
+    var naam = cells[0].textContent.trim();
+    var email = cells[1].textContent.trim() === '-' ? '' : cells[1].textContent.trim();
+    var telefoon = cells[2].textContent.trim() === '-' ? '' : cells[2].textContent.trim();
+    var adres = cells[3].textContent.trim() === '-' ? '' : cells[3].textContent.trim();
+    
+    row.innerHTML = `
+        <td>
+            <input type="text" id="edit-naam-${klantId}" value="${naam}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;" required>
+        </td>
+        <td>
+            <input type="email" id="edit-email-${klantId}" value="${email}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-telefoon-${klantId}" value="${telefoon}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td>
+            <input type="text" id="edit-adres-${klantId}" value="${adres}" class="form-control" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:4px;">
+        </td>
+        <td style="text-align:center;">
+            <button class="btn btn-sm btn-success" onclick="window.saveKlant('${klantId}')" style="margin-right:5px;">
+                💾 Opslaan
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="window.cancelEditKlant('${klantId}')">
+                ❌ Annuleren
+            </button>
+        </td>
+    `;
+}
+
+// ============================================
+// KLANT OPSLAAN
+// ============================================
+
+async function saveKlant(klantId) {
+    console.log('💾 Opslaan van klant:', klantId);
+    
+    var naamInput = document.getElementById('edit-naam-' + klantId);
+    var emailInput = document.getElementById('edit-email-' + klantId);
+    var telefoonInput = document.getElementById('edit-telefoon-' + klantId);
+    var adresInput = document.getElementById('edit-adres-' + klantId);
+    
+    if (!naamInput) {
+        showMessage('Fout: kan velden niet vinden.');
+        return;
+    }
+    
+    var naam = naamInput.value.trim();
+    var email = emailInput.value.trim();
+    var telefoon = telefoonInput.value.trim();
+    var adres = adresInput.value.trim();
+    
+    if (!naam) {
+        showMessage('❌ Naam is verplicht!');
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .update({ naam: naam, email: email, telefoon: telefoon, adres: adres })
+            .eq('id', klantId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Klant succesvol bijgewerkt!');
+        loadKlanten();
+        
+    } catch (error) {
+        console.error('❌ Fout bij opslaan:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// KLANT BEWERKING ANNULEREN
+// ============================================
+
+function cancelEditKlant(klantId) {
+    console.log('❌ Bewerking geannuleerd voor:', klantId);
+    loadKlanten();
+}
+
+// ============================================
+// KLANT VERWIJDEREN
+// ============================================
+
+async function deleteKlant(klantId) {
+    console.log('🗑️ Verwijderen van klant:', klantId);
+    
+    if (!confirm('Weet je zeker dat je deze klant wilt verwijderen?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .delete()
+            .eq('id', klantId);
+        
+        if (error) throw error;
+        
+        showMessage('✅ Klant succesvol verwijderd!');
+        loadKlanten();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// KLANT SUBMIT
+// ============================================
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'klantForm') {
+        event.preventDefault();
+        await handleKlantSubmit(event);
+    }
+});
+
+async function handleKlantSubmit(event) {
+    var naam = document.getElementById('klantNaam').value.trim();
+    var email = document.getElementById('klantEmail').value.trim();
+    var telefoon = document.getElementById('klantTelefoon').value.trim();
+    var adres = document.getElementById('klantAdres').value.trim();
+    var messageDiv = document.getElementById('klantFormMessage');
+    var button = event.target.querySelector('button[type="submit"]');
+    var originalText = button.textContent;
+    
+    if (!naam) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Naam is verplicht!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met opslaan...</p>';
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('klanten')
+            .insert([{ naam: naam, email: email, telefoon: telefoon, adres: adres }]);
+        
+        if (error) throw error;
+        
+        messageDiv.innerHTML = '<p style="color: #28a745;">✅ Klant ' + naam + ' succesvol toegevoegd!</p>';
+        document.getElementById('klantForm').reset();
+        
+        setTimeout(function() {
+            hideAddKlantForm();
+            loadKlanten();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout: ' + error.message + '</p>';
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
+// EXCEL IMPORT - KLANTEN
+// ============================================
+
+var excelData = [];
+var excelHeaders = [];
+
+function showExcelImport() {
+    var modal = document.getElementById('excelImportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    document.getElementById('excelImportStatus').innerHTML = '';
+    document.getElementById('excelPreview').style.display = 'none';
+    document.getElementById('excelImportBtn').style.display = 'none';
+    excelData = [];
+    excelHeaders = [];
+}
+
+function closeExcelImport() {
+    var modal = document.getElementById('excelImportModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('excelFileInput').value = '';
+}
+
+function handleExcelFile(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    processExcelFile(file);
+}
+
+function handleExcelDrop(event) {
+    event.preventDefault();
+    var file = event.dataTransfer.files[0];
+    if (!file) return;
+    processExcelFile(file);
+}
+
+function processExcelFile(file) {
+    var reader = new FileReader();
+    var statusDiv = document.getElementById('excelImportStatus');
+    
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bestand wordt gelezen...</p>';
+    
+    reader.onload = function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            var jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            if (!jsonData || jsonData.length === 0) {
+                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Geen data gevonden in het bestand.</p>';
+                return;
+            }
+            
+            excelHeaders = Object.keys(jsonData[0]);
+            excelData = jsonData;
+            
+            showExcelPreview(jsonData);
+            
+            statusDiv.innerHTML = `
+                <p style="color: #28a745;">✅ ${jsonData.length} rijen gevonden.</p>
+                <p style="color: #666; font-size:0.85rem;">Kolommen: ${excelHeaders.join(', ')}</p>
+            `;
+            
+            document.getElementById('excelImportBtn').style.display = 'inline-block';
+            
+        } catch (error) {
+            console.error('❌ Fout bij lezen Excel:', error);
+            statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout bij lezen: ' + error.message + '</p>';
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+function showExcelPreview(data) {
+    var previewDiv = document.getElementById('excelPreview');
+    var contentDiv = document.getElementById('excelPreviewContent');
+    
+    if (!previewDiv || !contentDiv) return;
+    
+    var previewData = data.slice(0, 10);
+    
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+    html += '<thead><tr style="background:#1A2B4C;color:white;">';
+    excelHeaders.forEach(function(header) {
+        html += '<th style="padding:8px 12px;text-align:left;white-space:nowrap;">' + header + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    
+    previewData.forEach(function(row) {
+        html += '<tr>';
+        excelHeaders.forEach(function(header) {
+            var value = row[header] || '';
+            html += '<td style="padding:6px 12px;border-bottom:1px solid #eee;">' + value + '</td>';
+        });
+        html += '</tr>';
+    });
+    
+    if (data.length > 10) {
+        html += '<tr><td colspan="' + excelHeaders.length + '" style="padding:8px 12px;color:#999;font-style:italic;">... en ' + (data.length - 10) + ' rijen meer</td></tr>';
+    }
+    
+    html += '</tbody></table>';
+    contentDiv.innerHTML = html;
+    previewDiv.style.display = 'block';
+}
+
+async function importExcelData() {
+    if (!excelData || excelData.length === 0) {
+        alert('❌ Geen data om te importeren.');
+        return;
+    }
+    
+    var statusDiv = document.getElementById('excelImportStatus');
+    var importBtn = document.getElementById('excelImportBtn');
+    
+    var gevondenKolommen = excelHeaders.join(', ');
+    if (!confirm('Weet je zeker dat je ' + excelData.length + ' klanten wilt importeren?\n\nGevonden kolommen: ' + gevondenKolommen)) {
+        return;
+    }
+    
+    importBtn.disabled = true;
+    importBtn.textContent = '⏳ Bezig...';
+    statusDiv.innerHTML = '<p style="color: #666;">⏳ Bezig met importeren...</p>';
+    
+    var successCount = 0;
+    var errorCount = 0;
+    var errors = [];
+    var skippedCount = 0;
+    
+    try {
+        const { data: bestaandeKlanten, error: klantenError } = await window.supabaseClient
+            .from('klanten')
+            .select('email');
+        
+        if (klantenError) throw klantenError;
+        
+        var bestaandeEmails = new Set(bestaandeKlanten.map(function(k) { return k.email; }).filter(Boolean));
+        
+        for (var i = 0; i < excelData.length; i++) {
+            var row = excelData[i];
+            
+            var firstName = row.first_name || '';
+            var lastName = row.last_name || '';
+            var naam = (firstName + ' ' + lastName).trim();
+            var email = row.email ? String(row.email).trim() : null;
+            var telefoon = row.phone ? String(row.phone).trim() : null;
+            
+            var adres1 = row.default_shipping_address_1 || '';
+            var adres2 = row.default_shipping_address_2 || '';
+            var stad = row.default_shipping_city || '';
+            var postcode = row.default_shipping_zip || '';
+            var provincie = row.default_shipping_province || '';
+            var land = row.default_shipping_country || '';
+            
+            var adresParts = [adres1, adres2];
+            if (postcode) adresParts.push(postcode);
+            if (stad) adresParts.push(stad);
+            if (provincie) adresParts.push(provincie);
+            if (land) adresParts.push(land);
+            
+            var adres = adresParts.filter(Boolean).join(', ') || null;
+            
+            if (!naam) {
+                errorCount++;
+                errors.push('Rij ' + (i + 1) + ': Geen naam gevonden');
+                continue;
+            }
+            
+            if (email && bestaandeEmails.has(email)) {
+                skippedCount++;
+                errors.push('Rij ' + (i + 1) + ': Email ' + email + ' bestaat al (overgeslagen)');
+                continue;
+            }
+            
+            const { error } = await window.supabaseClient
+                .from('klanten')
+                .insert([{
+                    naam: naam,
+                    email: email || null,
+                    telefoon: telefoon || null,
+                    adres: adres || null
+                }]);
+            
+            if (error) {
+                errorCount++;
+                errors.push('Rij ' + (i + 1) + ': ' + error.message);
+            } else {
+                successCount++;
+                if (email) bestaandeEmails.add(email);
+            }
+        }
+        
+        var resultMessage = '✅ ' + successCount + ' klanten succesvol geïmporteerd.';
+        if (skippedCount > 0) {
+            resultMessage += '\n⏭️ ' + skippedCount + ' klanten overgeslagen (dubbele email).';
+        }
+        if (errorCount > 0) {
+            resultMessage += '\n⚠️ ' + errorCount + ' fouten: ' + errors.slice(0, 5).join('; ') + (errors.length > 5 ? '... en ' + (errors.length - 5) + ' meer' : '');
+        }
+        
+        statusDiv.innerHTML = '<p style="color: ' + (errorCount > 0 && successCount === 0 ? '#dc3545' : errorCount > 0 ? '#ffc107' : '#28a745') + ';">' + resultMessage + '</p>';
+        
+        if (successCount > 0) {
+            loadKlanten();
+            loadStats();
+        }
+        
+        if (errorCount === 0 && skippedCount === 0) {
+            setTimeout(function() {
+                closeExcelImport();
+            }, 3000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Fout bij importeren:', error);
+        statusDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout: ' + error.message + '</p>';
+    } finally {
+        importBtn.disabled = false;
+        importBtn.textContent = '💾 Importeer data';
+    }
+}
+
+// ============================================
+// VERHUUR FUNCTIES
+// ============================================
+
+var alleVerhuur = [];
+
+function showAddVerhuurForm() {
+    var form = document.getElementById('addVerhuurForm');
+    if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+        loadVerhuurSelectOptions();
+    }
+}
+
+function hideAddVerhuurForm() {
+    var form = document.getElementById('addVerhuurForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+    var message = document.getElementById('verhuurFormMessage');
+    if (message) {
+        message.innerHTML = '';
+    }
+    var formElement = document.getElementById('verhuurForm');
+    if (formElement) {
+        formElement.reset();
+    }
+}
+
+async function loadVerhuurSelectOptions() {
+    var fietsSelect = document.getElementById('verhuurFiets');
+    var klantSelect = document.getElementById('verhuurKlant');
+    
+    if (fietsSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .select('id, serienummer, fiets_modellen (merk, model, kleur)')
+                .eq('status', 'beschikbaar')
+                .order('serienummer', { ascending: true });
+            
+            if (!error && data) {
+                fietsSelect.innerHTML = '<option value="">-- Selecteer een fiets --</option>';
+                data.forEach(function(fiets) {
+                    var modelInfo = fiets.fiets_modellen || { merk: '', model: '', kleur: '' };
+                    var label = fiets.serienummer + ' - ' + modelInfo.merk + ' ' + modelInfo.model + ' (' + modelInfo.kleur + ')';
+                    var option = document.createElement('option');
+                    option.value = fiets.id;
+                    option.textContent = label;
+                    fietsSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden fietsen:', error);
+        }
+    }
+    
+    if (klantSelect) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('klanten')
+                .select('id, naam')
+                .order('naam', { ascending: true });
+            
+            if (!error && data) {
+                klantSelect.innerHTML = '<option value="">-- Selecteer een klant --</option>';
+                data.forEach(function(klant) {
+                    var option = document.createElement('option');
+                    option.value = klant.id;
+                    option.textContent = klant.naam;
+                    klantSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fout bij laden klanten:', error);
+        }
+    }
+}
+
+async function loadVerhuur() {
+    console.log('📥 Laden van verhuur...');
+    alleVerhuur = [];
+    
+    var lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    try {
+        if (!window.supabaseClient) {
+            lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Geen verbinding</h3></div>';
+            return;
+        }
+        
+        const { data, error } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select(`
+                *,
+                individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                klanten (naam, email, telefoon)
+            `)
+            .order('start_datum', { ascending: false });
+        
+        if (error) throw error;
+        
+        alleVerhuur = data || [];
+        
+        if (!data || data.length === 0) {
+            lijst.innerHTML = `
+                <div class="card" style="text-align: center; padding: 40px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+                    <h3>Geen verhuur gevonden</h3>
+                    <p style="color: #999;">Start een nieuwe verhuur met de knop hierboven.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        toonVerhuurLijst(data);
+    } catch (error) {
+        console.error('❌ Fout bij laden verhuur:', error);
+        lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>';
+    }
+}
+
+async function filterVerhuur() {
+    var zoekTerm = document.getElementById('verhuurZoekInput').value.toLowerCase().trim();
+    var statusFilter = document.getElementById('verhuurStatusFilter').value;
+    var lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    if (alleVerhuur.length === 0) {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('verhuur_historiek')
+                .select(`
+                    *,
+                    individuele_fietsen (serienummer, fiets_modellen (merk, model, kleur)),
+                    klanten (naam, email, telefoon)
+                `)
+                .order('start_datum', { ascending: false });
+            
+            if (error) throw error;
+            alleVerhuur = data || [];
+        } catch (error) {
+            console.error('❌ Fout bij laden:', error);
+            lijst.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><h3>❌ Fout bij laden</h3></div>';
+            return;
+        }
+    }
+    
+    var gefilterd = alleVerhuur;
+    
+    if (zoekTerm) {
+        gefilterd = gefilterd.filter(function(verhuur) {
+            var fietsInfo = verhuur.individuele_fietsen || { serienummer: '' };
+            var modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '' };
+            var klantInfo = verhuur.klanten || { naam: '' };
+            var zoekString = (fietsInfo.serienummer + ' ' + modelInfo.merk + ' ' + modelInfo.model + ' ' + klantInfo.naam).toLowerCase();
+            return zoekString.includes(zoekTerm);
+        });
+    }
+    
+    if (statusFilter === 'actief') {
+        gefilterd = gefilterd.filter(function(v) { return !v.eind_datum; });
+    } else if (statusFilter === 'afgerond') {
+        gefilterd = gefilterd.filter(function(v) { return v.eind_datum; });
+    }
+    
+    if (gefilterd.length === 0) {
+        lijst.innerHTML = `
+            <div class="card" style="text-align: center; padding: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🔍</div>
+                <h3>Geen verhuur gevonden</h3>
+                <p style="color: #999;">Probeer een andere zoekterm of reset de filter.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    toonVerhuurLijst(gefilterd, 'Totaal: ' + gefilterd.length + ' verhuurregels (gefilterd)');
+}
+
+function resetVerhuurFilter() {
+    document.getElementById('verhuurZoekInput').value = '';
+    document.getElementById('verhuurStatusFilter').value = '';
+    alleVerhuur = [];
+    loadVerhuur();
+}
+
+function toonVerhuurLijst(data, footerText) {
+    var lijst = document.getElementById('verhuurLijst');
+    if (!lijst) return;
+    
+    var html = `
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fiets</th>
+                        <th>Klant</th>
+                        <th>Start</th>
+                        <th>Eind</th>
+                        <th>Dagen in bezit</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.forEach(function(verhuur) {
+        var fietsInfo = verhuur.individuele_fietsen || { serienummer: 'Onbekend', fiets_modellen: { merk: '', model: '', kleur: '' } };
+        var modelInfo = fietsInfo.fiets_modellen || { merk: '', model: '', kleur: '' };
+        var klantInfo = verhuur.klanten || { naam: 'Onbekend' };
+        
+        var isActief = !verhuur.eind_datum;
+        var statusClass = isActief ? 'badge-rented' : 'badge-available';
+        var statusText = isActief ? '🔴 Actief' : '✅ Afgerond';
+        
+        var startDatum = new Date(verhuur.start_datum);
+        var eindDatum = verhuur.eind_datum ? new Date(verhuur.eind_datum) : new Date();
+        
+        var tijdVerschil = eindDatum - startDatum;
+        var dagenInBezit = Math.floor(tijdVerschil / (1000 * 60 * 60 * 24));
+        
+        var startDatumStr = startDatum.toLocaleDateString('nl-BE');
+        var eindDatumStr = verhuur.eind_datum ? eindDatum.toLocaleDateString('nl-BE') : '-';
+        
+        var dagenKleur = '#28a745';
+        if (dagenInBezit > 30 && dagenInBezit <= 90) {
+            dagenKleur = '#ffc107';
+        } else if (dagenInBezit > 90) {
+            dagenKleur = '#dc3545';
+        }
+        
+        html += `
+            <tr id="verhuur-${verhuur.id}">
+                <td><strong>${fietsInfo.serienummer}</strong><br><span style="font-size:0.8rem;color:#666;">${modelInfo.merk} ${modelInfo.model}</span></td>
+                <td><strong>${klantInfo.naam}</strong></td>
+                <td>${startDatumStr}</td>
+                <td>${eindDatumStr}</td>
+                <td style="font-weight:600;color:${dagenKleur};">
+                    ${dagenInBezit} ${dagenInBezit === 1 ? 'dag' : 'dagen'}
+                    ${isActief ? '⏳' : ''}
+                </td>
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                <td style="text-align:center;">
+                    ${isActief ? `
+                        <button class="btn btn-sm btn-success" onclick="window.beëindigVerhuur('${verhuur.id}')" style="margin-right:5px;">
+                            ✅ Beëindigen
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-danger" onclick="window.deleteVerhuur('${verhuur.id}')">
+                        🗑️ Verwijderen
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+            ${footerText || 'Totaal: ' + data.length + ' verhuurregels'}
+        </p>
+    `;
+    
+    lijst.innerHTML = html;
+}
+
+// ============================================
+// VERHUUR SUBMIT
+// ============================================
+
+document.addEventListener('submit', async function(event) {
+    if (event.target.id === 'verhuurForm') {
+        event.preventDefault();
+        await handleVerhuurSubmit(event);
+    }
+});
+
+async function handleVerhuurSubmit(event) {
+    var fietsId = document.getElementById('verhuurFiets').value;
+    var klantId = document.getElementById('verhuurKlant').value;
+    var startDatum = document.getElementById('verhuurStart').value;
+    var opmerkingen = document.getElementById('verhuurOpmerkingen').value.trim();
+    var messageDiv = document.getElementById('verhuurFormMessage');
+    var button = event.target.querySelector('button[type="submit"]');
+    var originalText = button.textContent;
+    
+    if (!fietsId || !klantId || !startDatum) {
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fiets, klant en startdatum zijn verplicht!</p>';
+        return;
+    }
+    
+    button.textContent = '⏳ Bezig...';
+    button.disabled = true;
+    messageDiv.innerHTML = '<p style="color: #666;">⏳ Verhuur wordt gestart...</p>';
+    
+    try {
+        const { error: verhuurError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .insert([{
+                fiets_id: fietsId,
+                klant_id: klantId,
+                start_datum: startDatum,
+                opmerkingen: opmerkingen || null
+            }]);
+        
+        if (verhuurError) throw verhuurError;
+        
+        const { error: fietsError } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .update({ status: 'verhuurd' })
+            .eq('id', fietsId);
+        
+        if (fietsError) throw fietsError;
+        
+        messageDiv.innerHTML = '<p style="color: #28a745;">✅ Verhuur succesvol gestart!</p>';
+        document.getElementById('verhuurForm').reset();
+        
+        setTimeout(function() {
+            hideAddVerhuurForm();
+            loadVerhuur();
+            loadFietsen();
+            loadStats();
+        }, 2000);
+    } catch (error) {
+        console.error('❌ Fout:', error);
+        messageDiv.innerHTML = '<p style="color: #dc3545;">❌ Fout: ' + error.message + '</p>';
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+// ============================================
+// VERHUUR BEËINDIGEN
+// ============================================
+
+async function beëindigVerhuur(verhuurId) {
+    console.log('✅ Beëindigen van verhuur:', verhuurId);
+    
+    if (!confirm('Weet je zeker dat je deze verhuur wilt beëindigen?')) {
+        return;
+    }
+    
+    var eindDatum = new Date().toISOString().split('T')[0];
+    
+    try {
+        const { data: verhuurData, error: verhuurFetchError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('fiets_id')
+            .eq('id', verhuurId)
+            .single();
+        
+        if (verhuurFetchError) throw verhuurFetchError;
+        
+        const { error: updateError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .update({ eind_datum: eindDatum })
+            .eq('id', verhuurId);
+        
+        if (updateError) throw updateError;
+        
+        if (verhuurData && verhuurData.fiets_id) {
+            const { error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .update({ status: 'beschikbaar' })
+                .eq('id', verhuurData.fiets_id);
+            
+            if (fietsError) throw fietsError;
+        }
+        
+        showMessage('✅ Verhuur succesvol beëindigd!');
+        loadVerhuur();
+        loadFietsen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij beëindigen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// VERHUUR VERWIJDEREN
+// ============================================
+
+async function deleteVerhuur(verhuurId) {
+    console.log('🗑️ Verwijderen van verhuur:', verhuurId);
+    
+    if (!confirm('Weet je zeker dat je deze verhuur wilt verwijderen?')) {
+        return;
+    }
+    
+    try {
+        const { data: verhuurData, error: fetchError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('fiets_id, eind_datum')
+            .eq('id', verhuurId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        const { error: deleteError } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .delete()
+            .eq('id', verhuurId);
+        
+        if (deleteError) throw deleteError;
+        
+        if (verhuurData && !verhuurData.eind_datum && verhuurData.fiets_id) {
+            const { error: fietsError } = await window.supabaseClient
+                .from('individuele_fietsen')
+                .update({ status: 'beschikbaar' })
+                .eq('id', verhuurData.fiets_id);
+            
+            if (fietsError) throw fietsError;
+        }
+        
+        showMessage('✅ Verhuur verwijderd!');
+        loadVerhuur();
+        loadFietsen();
+        loadStats();
+        
+    } catch (error) {
+        console.error('❌ Fout bij verwijderen:', error);
+        showMessage('❌ Fout: ' + error.message);
+    }
+}
+
+// ============================================
+// STATISTIEKEN
+// ============================================
+
+async function loadStats() {
+    try {
+        if (!window.supabaseClient) return;
+        
+        const { count: modellenCount } = await window.supabaseClient
+            .from('fiets_modellen')
+            .select('*', { count: 'exact', head: true });
+        
+        const { count: fietsenCount } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select('*', { count: 'exact', head: true });
+        
+        const { count: klantenCount } = await window.supabaseClient
+            .from('klanten')
+            .select('*', { count: 'exact', head: true });
+        
+        const { count: verhuurCount } = await window.supabaseClient
+            .from('verhuur_historiek')
+            .select('*', { count: 'exact', head: true })
+            .is('eind_datum', null);
+        
+        var el1 = document.getElementById('stat-modellen');
+        var el2 = document.getElementById('stat-fietsen');
+        var el3 = document.getElementById('stat-klanten');
+        var el4 = document.getElementById('stat-verhuur');
+        if (el1) el1.textContent = modellenCount || 0;
+        if (el2) el2.textContent = fietsenCount || 0;
+        if (el3) el3.textContent = klantenCount || 0;
+        if (el4) el4.textContent = verhuurCount || 0;
+    } catch (error) {
+        console.error('❌ Fout bij laden statistieken:', error);
+    }
+}
+
+// ============================================
+// DASHBOARD
+// ============================================
+
+function loadDashboard() {
+    console.log('📊 Dashboard laden...');
+    
+    if (typeof window.renderNavigation === 'function') {
+        window.renderNavigation();
+    }
+    
+    navigateTo('dashboard');
+}
+
+// ============================================
+// HULPFUNCTIES
+// ============================================
+
+function showMessage(message) {
+    alert('📢 ' + message);
+}
+
+// ============================================
+// QR-CODE FUNCTIES
+// ============================================
+
+async function showQRCode(serienummer) {
+    console.log('📱 Toon QR-code voor:', serienummer);
+    
+    var fietsGegevens = null;
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('individuele_fietsen')
+            .select('*, fiets_modellen (merk, model, kleur)')
+            .eq('serienummer', serienummer)
+            .single();
+        
+        if (!error && data) {
+            fietsGegevens = data;
+        }
+    } catch (error) {
+        console.warn('⚠️ Kan fietsgegevens niet ophalen:', error);
+    }
+    
+    var modal = document.getElementById('qrModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'qrModal';
+        modal.style.cssText = `
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        `;
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                max-width: 450px;
+                width: 100%;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                position: relative;
+            ">
+                <button onclick="window.closeQRModal()" style="
+                    position: absolute;
+                    top: 10px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #999;
+                ">✕</button>
+                
+                <div id="qrExportContainer" style="padding: 10px;">
+                    <h3 style="margin-bottom: 5px; color: #1A2B4C;">🚲 Panta Club</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                        Scan de QR-code voor fietsinformatie
+                    </p>
+                    
+                    <div id="qrCodeContainer" style="display: flex; justify-content: center; margin: 10px 0;"></div>
+                    
+                    <div id="qrFietsInfo" style="margin-top: 10px; padding: 10px; background: #f8f6f3; border-radius: 8px;">
+                        <p style="margin: 3px 0; font-weight: 600; color: #1A2B4C;" id="qrModelDisplay">-</p>
+                        <p style="margin: 3px 0; color: #666; font-size: 0.9rem;">
+                            Serienummer: <strong id="qrSerienummerDisplay">-</strong>
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+                    <button onclick="window.downloadQRCode()" class="btn btn-primary">
+                        ⬇️ Download afbeelding
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                window.closeQRModal();
+            }
+        });
+    }
+    
+    modal.style.display = 'flex';
+    
+    var container = document.getElementById('qrCodeContainer');
+    var modelDisplay = document.getElementById('qrModelDisplay');
+    var serienummerDisplay = document.getElementById('qrSerienummerDisplay');
+    
+    if (container) {
+        container.innerHTML = '';
+        
+        if (fietsGegevens && fietsGegevens.fiets_modellen) {
+            var model = fietsGegevens.fiets_modellen;
+            var kleurStyle = 'display:inline-block;width:14px;height:14px;border-radius:50%;background:' + model.kleur.toLowerCase() + ';border:1px solid #ddd;vertical-align:middle;margin-right:5px;';
+            modelDisplay.innerHTML = `
+                <span style="${kleurStyle}"></span>
+                ${model.merk} ${model.model} (${model.kleur})
+            `;
+        } else {
+            modelDisplay.textContent = 'Onbekend model';
+        }
+        
+        serienummerDisplay.textContent = serienummer;
+        
+        window._currentQRSerienummer = serienummer;
+        window._currentQRFietsData = fietsGegevens;
+        
+        try {
+            new QRCode(container, {
+                text: serienummer,
+                width: 200,
+                height: 200,
+                colorDark: '#1A2B4C',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (error) {
+            console.error('❌ Fout bij genereren QR:', error);
+            container.innerHTML = '<p style="color: #dc3545;">❌ Kan QR-code niet genereren</p>';
+        }
+    }
+}
+
+function closeQRModal() {
+    var modal = document.getElementById('qrModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function downloadQRCode() {
+    console.log('⬇️ Start download van QR-afbeelding...');
+    
+    var qrContainer = document.getElementById('qrCodeContainer');
+    if (!qrContainer) {
+        alert('❌ Geen QR-code gevonden.');
+        return;
+    }
+    
+    var qrCanvas = qrContainer.querySelector('canvas');
+    if (!qrCanvas) {
+        alert('❌ Geen QR-code afbeelding gevonden.');
+        return;
+    }
+    
+    var modelDisplay = document.getElementById('qrModelDisplay');
+    var serienummerDisplay = document.getElementById('qrSerienummerDisplay');
+    var modelText = modelDisplay ? modelDisplay.textContent.trim() : 'Panta Club';
+    var serienummer = serienummerDisplay ? serienummerDisplay.textContent.trim() : window._currentQRSerienummer || 'Onbekend';
+    
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    
+    var padding = 30;
+    var qrSize = 200;
+    var totalWidth = qrSize + (padding * 2);
+    var totalHeight = qrSize + (padding * 2) + 70;
+    
+    canvas.width = totalWidth;
+    canvas.height = totalHeight;
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, totalWidth, totalHeight);
+    
+    ctx.drawImage(qrCanvas, padding, padding, qrSize, qrSize);
+    
+    ctx.fillStyle = '#1A2B4C';
+    ctx.font = 'bold 14px Poppins, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(modelText, totalWidth / 2, qrSize + padding + 30);
+    
+    ctx.fillStyle = '#666666';
+    ctx.font = '12px Poppins, sans-serif';
+    ctx.fillText('Serienummer: ' + serienummer, totalWidth / 2, qrSize + padding + 55);
+    
+    try {
+        var link = document.createElement('a');
+        link.download = 'PantaClub_QR_' + serienummer + '.png';
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('✅ QR-afbeelding gedownload');
+        showMessage('✅ Afbeelding gedownload!');
+    } catch (error) {
+        console.error('❌ Fout bij downloaden:', error);
+        alert('❌ Kan afbeelding niet downloaden. Probeer opnieuw.');
+    }
+}
 
 // ============================================
 // EXPORTEER FUNCTIES
@@ -1722,4 +2983,4 @@ window.showQRCode = showQRCode;
 window.closeQRModal = closeQRModal;
 window.downloadQRCode = downloadQRCode;
 
-console.log('✅ Alle functies geëxporteerd!');
+console.log('✅ Applicatie klaar voor gebruik');
