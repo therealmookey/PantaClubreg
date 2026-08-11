@@ -1377,12 +1377,18 @@ async function importFietsExcelData() {
     var matchedModels = [];
     
     try {
+        // ============================================
+        // HAAL ALLE BESTAANDE MODELLEN OP
+        // ============================================
         const { data: bestaandeModellen, error: modellenError } = await window.supabaseClient
             .from('fiets_modellen')
             .select('*');
         
         if (modellenError) throw modellenError;
         
+        // ============================================
+        // HAAL ALLE BESTAANDE FIETSEN OP (VOOR DUPLICATE CHECK)
+        // ============================================
         const { data: bestaandeFietsen, error: fietsenError } = await window.supabaseClient
             .from('individuele_fietsen')
             .select('serienummer');
@@ -1391,16 +1397,33 @@ async function importFietsExcelData() {
         
         var bestaandeSerienummers = new Set(bestaandeFietsen.map(function(f) { return f.serienummer; }));
         
+        // ============================================
+        // HAAL ALLE KLANTEN OP (VOOR KOPPELING)
+        // ============================================
         const { data: alleKlanten, error: klantenError } = await window.supabaseClient
             .from('klanten')
             .select('id, naam');
         
         if (klantenError) throw klantenError;
         
+        // ============================================
+        // MAP VOOR UNIEKE MODELLEN (VERMIJD DUPLICATEN)
+        // ============================================
+        var modelCache = {};
+        var modelIdMap = {};
+        
+        // Bouw een cache van bestaande modellen op basis van "merk|model|kleur"
+        bestaandeModellen.forEach(function(model) {
+            var key = (model.merk + '|' + model.model + '|' + (model.kleur || '')).toLowerCase();
+            modelCache[key] = model.id;
+        });
+        
         for (var i = 0; i < fietsExcelData.length; i++) {
             var row = fietsExcelData[i];
             
+            // ============================================
             // 1. SERIENUMMER
+            // ============================================
             var serienummer = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1425,7 +1448,9 @@ async function importFietsExcelData() {
                 continue;
             }
             
+            // ============================================
             // 2. TYPE/MODEL
+            // ============================================
             var type = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1438,7 +1463,9 @@ async function importFietsExcelData() {
                 }
             }
             
+            // ============================================
             // 3. KLEUR
+            // ============================================
             var kleur = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1451,54 +1478,61 @@ async function importFietsExcelData() {
                 }
             }
             
+            // ============================================
             // 4. MERK
+            // ============================================
             var merk = 'WOOM';
             if (type) {
                 var typeParts = type.split(' ');
                 if (typeParts.length > 0 && typeParts[0].length > 0) {
-                    merk = typeParts[0];
+                    // Controleer of het eerste deel een merk is (WOOM, Panta, etc.)
+                    var possibleMerk = typeParts[0].toUpperCase();
+                    if (possibleMerk === 'WOOM' || possibleMerk === 'PANTA' || possibleMerk === 'CUBE' || possibleMerk === 'SCOTT') {
+                        merk = possibleMerk;
+                    }
                 }
             }
             
-            // 5. MODEL ID
+            // ============================================
+            // 5. MODEL ID - CHECK OF MODEL AL BESTAAT
+            // ============================================
+            var modelKey = (merk + '|' + type + '|' + (kleur || '')).toLowerCase();
             var modelId = null;
             
-            if (type) {
-                var modelMatch = bestaandeModellen.find(function(m) {
-                    return m.merk.toLowerCase() === merk.toLowerCase() && 
-                           m.model.toLowerCase() === type.toLowerCase() && 
-                           (kleur ? m.kleur.toLowerCase() === kleur.toLowerCase() : true);
-                });
+            // Kijk of het model al in de cache zit
+            if (modelCache[modelKey]) {
+                modelId = modelCache[modelKey];
+                matchedModels.push(merk + ' - ' + type + ' (' + (kleur || 'Onbekend') + ')');
+            } else if (type) {
+                // Model bestaat nog niet, maak een nieuwe aan
+                var modelKleur = kleur || 'Onbekend';
+                const { data: newModel, error: newModelError } = await window.supabaseClient
+                    .from('fiets_modellen')
+                    .insert([{ 
+                        merk: merk, 
+                        model: type, 
+                        kleur: modelKleur
+                    }])
+                    .select();
                 
-                if (modelMatch) {
-                    modelId = modelMatch.id;
-                    matchedModels.push(merk + ' - ' + type + ' (' + (kleur || 'Onbekend') + ')');
-                } else {
-                    var modelKleur = kleur || 'Onbekend';
-                    const { data: newModel, error: newModelError } = await window.supabaseClient
-                        .from('fiets_modellen')
-                        .insert([{ 
-                            merk: merk, 
-                            model: type, 
-                            kleur: modelKleur
-                        }])
-                        .select();
-                    
-                    if (newModelError) {
-                        errorCount++;
-                        errors.push('Rij ' + (i + 1) + ': Fout bij aanmaken model: ' + newModelError.message);
-                        continue;
-                    }
-                    modelId = newModel[0].id;
-                    newModels.push(merk + ' - ' + type + ' (' + modelKleur + ')');
+                if (newModelError) {
+                    errorCount++;
+                    errors.push('Rij ' + (i + 1) + ': Fout bij aanmaken model: ' + newModelError.message);
+                    continue;
                 }
+                modelId = newModel[0].id;
+                // Sla het nieuwe model op in de cache
+                modelCache[modelKey] = modelId;
+                newModels.push(merk + ' - ' + type + ' (' + modelKleur + ')');
             } else {
                 errorCount++;
                 errors.push('Rij ' + (i + 1) + ': Geen type/model gevonden');
                 continue;
             }
             
+            // ============================================
             // 6. STATUS
+            // ============================================
             var statusRaw = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1518,7 +1552,9 @@ async function importFietsExcelData() {
                 fietsStatus = 'in-onderhoud';
             }
             
+            // ============================================
             // 7. KLANT KOPPELING
+            // ============================================
             var klantId = null;
             var klantNaam = null;
             for (var key in row) {
@@ -1542,7 +1578,9 @@ async function importFietsExcelData() {
                 }
             }
             
+            // ============================================
             // 8. NOTITIES
+            // ============================================
             var notities = '';
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1571,7 +1609,9 @@ async function importFietsExcelData() {
                 notities = notities ? notities + ' | Oorsprong: ' + oorsprongSerie : 'Oorsprong: ' + oorsprongSerie;
             }
             
+            // ============================================
             // 9. AANKOOP DATUM
+            // ============================================
             var aankoopDatum = null;
             for (var key in row) {
                 if (row.hasOwnProperty(key)) {
@@ -1589,7 +1629,9 @@ async function importFietsExcelData() {
                 }
             }
             
+            // ============================================
             // 10. FIETS OPSLAAN
+            // ============================================
             const { error: fietsError } = await window.supabaseClient
                 .from('individuele_fietsen')
                 .insert([{
@@ -1611,9 +1653,14 @@ async function importFietsExcelData() {
             }
         }
         
+        // ============================================
+        // RESULTAAT TONEN
+        // ============================================
         var resultMessage = '✅ ' + successCount + ' fietsen succesvol geïmporteerd.';
         if (newModels.length > 0) {
             resultMessage += '\n📦 Nieuwe modellen aangemaakt: ' + newModels.length;
+            // Toon welke modellen zijn aangemaakt
+            resultMessage += '\n   ' + newModels.slice(0, 5).join(', ') + (newModels.length > 5 ? '... en ' + (newModels.length - 5) + ' meer' : '');
         }
         if (matchedModels.length > 0) {
             resultMessage += '\n🔗 Bestaande modellen gebruikt: ' + matchedModels.length;
